@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="../license-config.js"></script>
+<meta name="robots" content="noindex, nofollow">
+<script src="google-gate.js?v=9df5b2ca12"></script>
+<script src="../gas-bridge.js?v=fd3a78ecf0"></script>
+<link rel="preconnect" href="https://script.google.com" crossorigin>
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#0f9aa8">
+<base target="_top">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>License Admin</title>
+<style>
+  :root { --teal:#0f9aa8; --teal-d:#0b6d79; --ink:#17333a; --muted:#5b6f75; --line:#dfe9eb; --bg:#f1f5f6;
+          --ok:#1b7f3b; --ok-bg:#e2f4e7; --warn:#9a5b00; --warn-bg:#fdf0d5; --bad:#b3261e; --bad-bg:#fde7e5; --off:#56656a; --off-bg:#e7ecee; }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; background:var(--bg); color:var(--ink); font-size:14px; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1200px; margin:0 auto; padding:0 18px 40px; transition:max-width .2s ease; }
+  .top { display:flex; align-items:center; justify-content:space-between; gap:10px 12px; flex-wrap:wrap; position:sticky; top:0; z-index:20; background:var(--bg); padding:14px 0 10px; }
+  .tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .seg { display:inline-flex; background:#e1eaec; border-radius:10px; padding:3px; }
+  .seg button { border:0; background:none; font:inherit; font-size:12px; font-weight:700; color:var(--muted); padding:6px 10px; border-radius:8px; cursor:pointer; }
+  .seg button.on { background:#fff; color:var(--teal-d); box-shadow:0 1px 3px rgba(16,42,48,.16); }
+  .pend { display:none; align-items:center; gap:6px; border:0; cursor:pointer; font:inherit; font-size:12.5px; font-weight:800; border-radius:20px; padding:7px 12px; background:var(--warn-bg); color:var(--warn); }
+  .pend b { background:var(--warn); color:#fff; border-radius:20px; min-width:20px; padding:1px 6px; text-align:center; }
+  .tabs .tb { display:inline-block; margin-left:6px; background:var(--warn); color:#fff; border-radius:20px; font-size:11px; padding:1px 7px; vertical-align:1px; }
+  .top h1 { margin:0; font-size:22px; }
+  .top .me { color:var(--muted); font-size:12.5px; }
+  .tabs { display:flex; gap:4px; margin:6px 0 14px; border-bottom:2px solid var(--line); flex-wrap:nowrap; overflow-x:auto; scrollbar-width:thin; }
+  .tabs button { background:none; border:0; padding:10px 14px; white-space:nowrap; border-radius:8px 8px 0 0; font:inherit; font-weight:700; color:var(--muted); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; }
+  .tabs button.on { color:var(--teal-d); border-bottom-color:var(--teal); }
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
+  .tile { background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 14px; min-width:0; box-shadow:0 1px 2px rgba(16,42,48,.05); }
+  .tile .n { font-size:24px; font-weight:800; line-height:1.15; overflow-wrap:anywhere; }
+  .tile .l { color:var(--muted); font-size:12.5px; margin-top:2px; }
+  .tile .s { color:var(--muted); font-size:11.5px; margin-top:3px; }
+  .tile.t-warn .n { color:var(--warn); } .tile.t-bad .n { color:var(--bad); } .tile.t-off .n { color:var(--off); } .tile.t-ok .n { color:var(--ok); }
+  .tile.t-money { background:#f6fbfb; } .tile.t-money .n { color:var(--teal-d); font-size:21px; }
+  .bar { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 10px; }
+  .bar input, .bar select { flex:1 1 170px; }
+  .bar .grow { flex:3 1 240px; }
+  input, select, textarea { width:100%; padding:9px 10px; border:1px solid #c6d5d9; border-radius:8px; font:inherit; background:#fff; color:var(--ink); }
+  input:focus, select:focus, textarea:focus, button:focus-visible { outline:2px solid var(--teal); outline-offset:1px; }
+  input:disabled, select:disabled { background:#f1f5f6; color:var(--muted); }
+  label { display:block; font-size:12px; font-weight:700; margin:12px 0 4px; }
+  label.chk { display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:400; margin-top:14px; }
+  label.chk input { width:auto; }
+  .hint { color:var(--muted); font-size:12px; margin-top:4px; line-height:1.4; }
+  button.btn { font:inherit; font-weight:700; border:0; border-radius:8px; padding:9px 14px; cursor:pointer; background:var(--off-bg); color:var(--ink); white-space:nowrap; }
+  button.btn.pri { background:var(--teal); color:#fff; }
+  button.btn.danger { background:var(--bad-bg); color:var(--bad); }
+  button.btn.sm { padding:6px 10px; font-size:12.5px; }
+  button.btn:hover { filter:brightness(.97); } button.btn:active { transform:translateY(1px); }
+  .b-one { background:#eef1f2; color:#44565b; } .b-sub { background:#e9e4fb; color:#4b3a9c; } .b-code { background:#e3f3f5; color:var(--teal-d); font-family:Consolas,Menlo,monospace; letter-spacing:.04em; cursor:pointer; }
+  .linkbox { display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:#f3f8f9; border:1px dashed var(--teal); border-radius:10px; padding:10px 12px; margin-top:8px; }
+  .linkbox code { flex:1 1 260px; font-family:Consolas,Menlo,monospace; font-size:12.5px; word-break:break-all; }
+  h2.sec { font-size:15px; margin:18px 0 8px; }
+  /* login */
+  #lgBg { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; padding:20px; background:linear-gradient(140deg,#0b6d79 0%,#0f9aa8 55%,#55c9a6 100%); }
+  .lg { background:#fff; border-radius:18px; width:100%; max-width:380px; padding:28px 26px 24px; text-align:center; box-shadow:0 18px 50px rgba(6,40,46,.35); }
+  .lg .ic { width:58px; height:58px; border-radius:50%; background:#e3f3f5; display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 auto 10px; }
+  .lg h1 { margin:0 0 4px; font-size:21px; } .lg p { margin:0 0 14px; color:var(--muted); font-size:13.5px; line-height:1.45; }
+  .lg label { text-align:left; }
+  .lg input.pin { text-align:center; font-size:24px; letter-spacing:.45em; font-weight:800; padding:11px 8px; }
+  .lg button.btn { width:100%; margin-top:14px; padding:12px; font-size:15px; }
+  .lg .alt { display:inline-block; margin-top:12px; color:var(--teal-d); font-size:13px; font-weight:700; cursor:pointer; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:14px; box-shadow:0 1px 2px rgba(16,42,48,.05); }
+  .card h2 { margin:0 0 4px; font-size:16px; }
+  .card p.sub { margin:0 0 6px; color:var(--muted); font-size:13px; line-height:1.45; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
+  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 14px; }
+  .grid5 { display:grid; grid-template-columns:repeat(5,1fr); gap:0 12px; }
+  .cols { display:grid; grid-template-columns:3fr 2fr; gap:14px; }
+  table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  th { text-align:left; font-size:11.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--line); background:#f8fbfb; }
+  td { padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tr:last-child td { border-bottom:0; }
+  td.num, th.num { text-align:right; white-space:nowrap; }
+  td .nm { font-weight:700; } td .em { color:var(--muted); font-size:12.5px; overflow-wrap:anywhere; }
+  tr.void td { color:var(--muted); text-decoration:line-through; } tr.void td:last-child { text-decoration:none; }
+  .badge { display:inline-block; border-radius:20px; padding:3px 10px; font-size:12px; font-weight:700; white-space:nowrap; }
+  .b-ok { background:var(--ok-bg); color:var(--ok); } .b-warn { background:var(--warn-bg); color:var(--warn); }
+  .b-bad { background:var(--bad-bg); color:var(--bad); } .b-off { background:var(--off-bg); color:var(--off); }
+  .b-tier { background:#e3f3f5; color:var(--teal-d); } .b-self { background:#ece8fb; color:#4b3a9c; font-size:11px; padding:2px 8px; margin-left:6px; }
+  .acts { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  .sheet-link { display:inline-block; padding:6px 10px; background:#e3f3f5; border-radius:8px; color:var(--teal-d); font-size:12.5px; font-weight:700; text-decoration:none; }
+  .sw { position:relative; display:inline-block; width:44px; height:24px; }
+  .sw input { position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; z-index:1; }
+  .sw span { position:absolute; inset:0; background:#b9c6ca; border-radius:24px; transition:background .15s; }
+  .sw span:after { content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .15s; }
+  .sw input:checked + span { background:var(--teal); }
+  .sw input:checked + span:after { transform:translateX(20px); }
+  .sw input:focus-visible + span { outline:2px solid var(--teal); outline-offset:2px; }
+  .empty { text-align:center; color:var(--muted); padding:30px 10px; background:#fff; border:1px dashed #c6d5d9; border-radius:12px; }
+  .bars { display:flex; align-items:flex-end; gap:10px; height:150px; padding-top:18px; }
+  .bars .b { flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%; min-width:0; }
+  .bars .b i { display:block; width:100%; max-width:64px; background:var(--teal); border-radius:6px 6px 0 0; min-height:2px; }
+  .bars .b .v { font-size:11.5px; font-weight:700; margin-bottom:4px; white-space:nowrap; }
+  .bars .b .m { font-size:11.5px; color:var(--muted); margin-top:5px; }
+  .kv div { display:flex; justify-content:space-between; gap:10px; padding:7px 0; border-bottom:1px solid var(--line); }
+  .kv div:last-child { border-bottom:0; } .kv b { white-space:nowrap; }
+  .bg { position:fixed; inset:0; background:rgba(10,30,35,.5); display:none; align-items:flex-start; justify-content:center; padding:24px 12px; overflow:auto; z-index:50; }
+  .dlg { background:#fff; border-radius:14px; width:100%; max-width:540px; padding:18px 20px 20px; }
+  .dlg h3 { margin:0 0 2px; font-size:18px; }
+  .dlg .foot { display:flex; gap:8px; justify-content:flex-end; margin-top:18px; flex-wrap:wrap; }
+  .msg { min-height:18px; margin-top:10px; font-size:13px; font-weight:700; color:var(--bad); }
+  .keybox { background:#f3f8f9; border:1px dashed var(--teal); border-radius:10px; padding:12px; margin-top:10px; line-height:1.45; }
+  .keybox .k { font-family:Consolas,Menlo,monospace; font-size:17px; font-weight:700; letter-spacing:.04em; word-break:break-all; }
+  .b-req { background:#fff1cf; color:#8a4b00; font-size:11.5px; padding:2px 8px; margin-top:4px; }
+  .b-cancel { background:#ece8fb; color:#4b3a9c; font-size:11px; padding:2px 8px; margin-left:6px; }
+  .qrbox { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; margin-top:8px; }
+  .qrbox img { width:160px; height:160px; object-fit:contain; border:1px solid var(--line); border-radius:10px; background:#fff; }
+  .qrbox .none { width:160px; height:160px; border:1px dashed #c6d5d9; border-radius:10px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:12.5px; text-align:center; padding:10px; }
+  .rc-img { display:inline-block; padding:6px 10px; background:#e3f3f5; border-radius:8px; color:var(--teal-d); font-size:12.5px; font-weight:700; text-decoration:none; }
+  .reqbox { margin-top:6px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .offer { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:400; margin:6px 0 0; color:var(--muted); }
+  .offer input { width:auto; }
+  .warnbox { background:var(--warn-bg); color:var(--warn); border-radius:8px; padding:9px 12px; font-size:13px; font-weight:700; margin:8px 0; display:none; }
+  #tText { min-height:420px; font-family:Consolas,Menlo,monospace; font-size:12.5px; line-height:1.45; }
+  a.btnlink { display:inline-block; font-weight:700; border-radius:8px; padding:10px 16px; background:var(--teal); color:#fff; text-decoration:none; }
+  #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 16px; border-radius:10px; font-weight:700; font-size:13.5px; display:none; z-index:90; max-width:92vw; }
+  #toast.bad { background:var(--bad); }
+  #busy { position:fixed; inset:0; background:rgba(255,255,255,.55); display:none; align-items:center; justify-content:center; z-index:80; font-weight:700; cursor:progress; }
+  #busy div { background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 20px; box-shadow:0 6px 24px rgba(0,0,0,.15); }
+  @media (max-width:860px) {
+    .tiles { grid-template-columns:1fr 1fr; } .grid2, .grid3, .cols { grid-template-columns:1fr; } .grid5 { grid-template-columns:1fr 1fr; }
+    table, tbody, tr, td { display:block; width:100%; } thead { display:none; }
+    table { border:0; background:none; } tr { background:#fff; border:1px solid var(--line); border-radius:12px; margin-bottom:10px; padding:6px 0; }
+    td { border:0; padding:6px 12px; } td.num { text-align:left; } .acts { justify-content:flex-start; }
+    td[data-l]:before { content:attr(data-l) ': '; color:var(--muted); font-size:12px; font-weight:700; }
+  }
+  @media (min-width:861px) and (max-width:1080px) { .tiles { grid-template-columns:1fr 1fr; } .grid5 { grid-template-columns:1fr 1fr 1fr; } .cols { grid-template-columns:1fr; } }
+  body { line-height:1.5; }
+  :root { --teal:#087581; }
+  button:disabled { opacity:.65; cursor:progress; }
+  label.chk input { width:18px; height:18px; flex:none; accent-color:var(--teal); }
+  .hint, .card p.sub { line-height:1.6; }
+  td.num, .tile .n { font-variant-numeric:tabular-nums; }
+  @media(max-width:540px) { input, select, textarea { font-size:16px; } .wrap { padding-left:12px; padding-right:12px; } .top { position:static; } }
+  @media(prefers-reduced-motion:reduce) { *, *:before, *:after { transition:none !important; scroll-behavior:auto !important; } }
+</style>
+</head>
+<body>
+<!-- ============ ADMIN LOGIN (6-digit PIN, on top of your Google account) ============ -->
+<div id="lgBg">
+  <div class="lg">
+    <div class="ic" aria-hidden="true">&#128274;</div>
+    <div id="lg_pin">
+      <h1>License Admin</h1>
+      <p id="lgSub">Enter your 6-digit Admin PIN.</p>
+      <input class="pin" id="lgPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="------" aria-label="Admin PIN">
+      <button class="btn pri" id="btnLogin" type="button">Log in</button>
+      <div class="hint" style="margin-top:12px">Forgot it? Open your License Admin sheet and choose <b>License Admin &gt; Reset Admin PIN to 000000</b>.</div>
+    </div>
+    <div id="lg_change" style="display:none">
+      <h1 id="lgChTitle">Choose a new Admin PIN</h1>
+      <p id="lgChSub">The starting PIN 000000 must be changed before the panel opens.</p>
+      <div id="lgOldBox"><label for="lgOld">Current PIN</label><input class="pin" id="lgOld" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="------"></div>
+      <label for="lgNew1">New PIN (6 digits)</label><input class="pin" id="lgNew1" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="------">
+      <label for="lgNew2">Type the new PIN again</label><input class="pin" id="lgNew2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="------">
+      <button class="btn pri" id="btnChPin" type="button">Save new PIN</button>
+      <a class="alt" id="lgChCancel" style="display:none">Cancel</a>
+    </div>
+    <div class="msg" id="lgMsg" aria-live="polite"></div>
+  </div>
+</div>
+
+<div class="wrap" id="app" style="display:none">
+  <div class="top">
+    <div>
+      <h1>License Admin</h1>
+      <div class="me" id="me"></div>
+    </div>
+    <div class="tools">
+      <button class="pend" id="pendChip" type="button" title="Payment receipts waiting for your check"><b id="pendN">0</b> <span id="pendTxt">pending payments</span></button>
+      <button class="btn pri" id="btnRefreshAll" type="button" title="Runs set up / repair, takes access from expired clients and reloads everything">&#8635; Refresh All</button>
+      <button class="btn" id="btnChangePin" type="button">Change PIN</button>
+      <button class="btn" id="btnLock" type="button">Lock</button>
+    </div>
+  </div>
+  <div class="tabs" role="tablist">
+    <button class="on" data-tab="clients" type="button">Clients</button>
+    <button data-tab="money" type="button">Payments &amp; finance<span class="tb" id="tabPend" style="display:none"></span></button>
+    <button data-tab="expenses" type="button">Expenses</button>
+    <button data-tab="referrals" type="button">Referrals</button>
+    <button data-tab="pricing" type="button">Pricing &amp; renewal info</button>
+    <button data-tab="terms" type="button">Terms</button>
+    <button data-tab="alerts" type="button">Alerts &amp; setup</button>
+  </div>
+
+  <!-- ============ CLIENTS ============ -->
+  <section id="tab_clients">
+    <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+      <div class="tile t-warn"><div class="n" id="nPending">0</div><div class="l">Pending payments</div><div class="s">Receipts awaiting review</div></div>
+      <div class="tile t-ok"><div class="n" id="nActive">0</div><div class="l">Active</div></div>
+      <div class="tile t-warn"><div class="n" id="nSoon">0</div><div class="l">Expiring within 7 days</div></div>
+      <div class="tile t-bad"><div class="n" id="nExpired">0</div><div class="l">Expired (access revoked)</div></div>
+      <div class="tile t-off"><div class="n" id="nOff">0</div><div class="l">Switched off by you</div></div>
+    </div>
+    <div class="tiles">
+      <div class="tile t-money"><div class="n" id="mMonth">0</div><div class="l">Received this month</div><div class="s" id="mMonthS"></div></div>
+      <div class="tile t-money"><div class="n" id="mYear">0</div><div class="l">Received this year</div><div class="s" id="mYearS"></div></div>
+      <div class="tile t-money"><div class="n" id="mMrr">0</div><div class="l">Monthly value of active plans</div><div class="s" id="mMrrS"></div></div>
+      <div class="tile t-money"><div class="n" id="mDue">0</div><div class="l">Renewals due in 30 days</div><div class="s" id="mDueS"></div></div>
+    </div>
+    <div class="bar">
+      <input class="grow" id="q" type="search" placeholder="Search business, email, phone or key" aria-label="Search clients">
+      <select id="fStatus" aria-label="Filter by status">
+        <option value="">All statuses</option><option value="active">Active</option><option value="soon">Expiring within 7 days</option>
+        <option value="expired">Expired</option><option value="disabled">Switched off</option><option value="self">Self-registered</option><option value="request">Asking for extra resorts</option><option value="cancelled">Cancelled by the client</option>
+      </select>
+      <select id="fTier" aria-label="Filter by tier"><option value="">All tiers</option></select>
+      <select id="fUsage" aria-label="Filter by direct login activity"><option value="">All usage levels</option><option value="active">Actively using</option><option value="less">Less active</option><option value="rare">Rarely using</option><option value="risk">Possible non-renewal</option><option value="never">No direct login recorded</option></select>
+      <button class="btn pri" id="btnAdd" type="button">+ Add client</button>
+    </div>
+    <div id="list"></div>
+  </section>
+
+  <!-- ============ PAYMENTS & FINANCE ============ -->
+  <section id="tab_money" style="display:none">
+    <p class="hint" id="financeNote" role="status"></p>
+    <div class="tiles">
+      <div class="tile t-money"><div class="n" id="fMonth">0</div><div class="l">This month</div></div>
+      <div class="tile t-money"><div class="n" id="fLast">0</div><div class="l">Last month</div></div>
+      <div class="tile t-money"><div class="n" id="fYear">0</div><div class="l">This year</div></div>
+      <div class="tile t-money"><div class="n" id="fAll">0</div><div class="l">All time</div><div class="s" id="fAllS"></div></div>
+    </div>
+    <div class="cols">
+      <div class="card"><h2>Received in the last 6 months</h2><div class="bars" id="chart"></div></div>
+      <div class="card"><h2>This year by tier</h2><div class="kv" id="byTier"></div><h2 style="margin-top:14px">This year by type</h2><div class="kv" id="byType"></div></div>
+    </div>
+    <div class="card" id="rcCard">
+      <h2>Receipts to check <span class="badge b-req" id="rcCount" style="display:none"></span></h2>
+      <p class="sub">Clients upload a picture of their payment receipt from the app (the picture is saved in your Drive, in that client's folder). Open the picture, check the amount, then <b>Log payment</b> to record it and extend the subscription (the client is emailed), or <b>Reject</b> it. You promised a check within <b id="rcHours">48</b> hours.</p>
+      <div id="rclist"></div>
+    </div>
+    <div class="bar">
+      <input class="grow" id="pq" type="search" placeholder="Search payments: business, email, reference, method" aria-label="Search payments">
+      <button class="btn pri" id="btnPayNew" type="button">+ Log a payment</button>
+    </div>
+    <div id="plist"></div>
+  </section>
+
+  <!-- ============ EXPENSES ============ -->
+  <section id="tab_expenses" style="display:none">
+    <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      <div class="tile t-money"><div class="n" id="xMonth">0</div><div class="l">Spent this month</div><div class="s" id="xMonthS"></div></div>
+      <div class="tile t-money"><div class="n" id="xYear">0</div><div class="l">Spent this year</div><div class="s" id="xYearS"></div></div>
+      <div class="tile t-money"><div class="n" id="xRun">0</div><div class="l">Subscriptions cost per month</div><div class="s" id="xRunS"></div></div>
+      <div class="tile t-ok" id="xNetTile"><div class="n" id="xNet">0</div><div class="l">Net this month</div><div class="s">Received minus spent</div></div>
+    </div>
+    <div class="cols">
+      <div class="card"><h2>Spent in the last 6 months</h2><div class="bars" id="xChart"></div></div>
+      <div class="card"><h2>This year by category</h2><div class="kv" id="xByCat"></div></div>
+    </div>
+    <div class="bar">
+      <input class="grow" id="xq" type="search" placeholder="Search expenses: label, category, notes" aria-label="Search expenses">
+      <select id="xKind" aria-label="Filter by kind"><option value="">One-time and subscriptions</option><option value="One-time">One-time only</option><option value="Subscription">Subscriptions only</option><option value="active">Running subscriptions</option></select>
+      <button class="btn pri" id="btnExpNew" type="button">+ Add expense</button>
+    </div>
+    <div id="xlist"></div>
+    <p class="hint">A <b>one-time</b> expense is counted once, on its date. A <b>subscription</b> is counted again every month, every year or every N days from its start date until you give it an end date. Everything is kept in the "Expenses" sheet.</p>
+  </section>
+
+  <!-- ============ REFERRALS ============ -->
+  <section id="tab_referrals" style="display:none">
+    <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      <div class="tile t-warn"><div class="n" id="rOwed">0</div><div class="l">Owed to partners</div><div class="s" id="rOwedS"></div></div>
+      <div class="tile t-money"><div class="n" id="rPaid">0</div><div class="l">Paid out to partners</div><div class="s" id="rPaidS"></div></div>
+      <div class="tile t-money"><div class="n" id="rEarned">0</div><div class="l">Partner earnings in total</div></div>
+      <div class="tile t-money"><div class="n" id="rDisc">0</div><div class="l">Client discounts per month</div><div class="s" id="rDiscS"></div></div>
+    </div>
+    <div class="card">
+      <h2>Referral program settings</h2>
+      <p class="sub"><b>Clients</b> see their own referral code on the main menu of the booking app. For every client they referred that is active on a paid plan they get the discount below on recurring plans, up to the maximum. <b>Partners</b> (people who are not clients) sign up on the partner page and earn a monthly share of confirmed recurring subscription payments for active clients. Quarterly and yearly payments accrue over their service months, within the term counted from the first payment. You pay partners yourself and log each payout here.</p>
+      <label class="chk"><input id="rfOn" type="checkbox"> The referral program is on</label>
+      <div class="grid5">
+        <div><label for="rfPct">Client discount per active referral (%)</label><input id="rfPct" inputmode="decimal"></div>
+        <div><label for="rfMax">Maximum client discount (%)</label><input id="rfMax" inputmode="decimal"></div>
+        <div><label for="rfShare">Partner share of each payment (%)</label><input id="rfShare" inputmode="decimal"></div>
+        <div><label for="rfPeriod">Partner earning period</label><select id="rfPeriod"><option value="months">Fixed number of months</option><option value="lifetime">Lifetime</option></select><label for="rfMonths" id="rfMonthsLabel">Number of months</label><input id="rfMonths" type="number" min="1" max="120" step="1"><div class="hint">Lifetime has no earning cutoff while the referral stays active. One-time Lifetime plan purchases still earn no share.</div></div>
+      </div>
+      <label class="chk"><input id="rfSignup" type="checkbox"> Anyone can sign up as a partner on the partner page</label>
+      <label for="rfBanner">Text of the referral banner on the sign-up form of the booking app</label>
+      <input id="rfBanner" maxlength="200">
+      <div class="hint">Client discounts are recalculated from current eligibility; partner rates apply when each monthly credit is recorded. To exclude a specific client, open Clients → Edit → Exclude from referral program.</div>
+      <div class="linkbox"><span><b>Partner page</b></span><code id="rfLink">Paste your License Server URL under Alerts &amp; setup first.</code><button class="btn sm" id="btnCopyRefLink" type="button">Copy link</button><a class="sheet-link" id="rfOpen" target="_blank" rel="noopener noreferrer" style="display:none">Open</a></div>
+      <div class="msg" id="rfMsg"></div>
+      <div style="margin-top:6px"><button class="btn pri" id="btnSaveRef" type="button">Save referral settings</button></div>
+    </div>
+
+    <div class="bar" style="align-items:center">
+      <h2 class="sec" style="flex:1 1 200px;margin:0">Partners (non-clients)</h2>
+      <input id="rq" type="search" placeholder="Search partners" aria-label="Search partners" style="flex:2 1 220px">
+      <button class="btn pri" id="btnRefNew" type="button">+ Add partner</button>
+    </div>
+    <div id="rplist"></div>
+
+    <h2 class="sec">Clients who referred other clients</h2>
+    <div id="rclients"></div>
+
+    <div class="cols" style="grid-template-columns:1fr 1fr;margin-top:6px">
+      <div><h2 class="sec">Partner earnings log</h2><div id="relist"></div></div>
+      <div><h2 class="sec">Payout log</h2><div id="rolist"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ PRICING & RENEWAL INFO ============ -->
+  <section id="tab_pricing" style="display:none">
+    <div class="card">
+      <h2>Prices</h2>
+      <p class="sub">The price of each tier, and whether it is on offer. Clients see the paid plans and prices inside their app (subscription box, expiry reminder, lock screen) and in reminder emails. A tier with price 0, or one that is switched off, is not shown to clients. Prices also fill in the amount when you log a payment.</p>
+      <div class="grid5">
+        <div><label for="pCur">Currency symbol</label><input id="pCur" maxlength="6"></div>
+        <div><label for="pMonthly">Monthly</label><input id="pMonthly" inputmode="decimal"><label class="offer"><input id="oMonthly" type="checkbox"> Available</label></div>
+        <div><label for="pQuarterly">Quarterly</label><input id="pQuarterly" inputmode="decimal"><label class="offer"><input id="oQuarterly" type="checkbox"> Available</label></div>
+        <div><label for="pYearly">Yearly</label><input id="pYearly" inputmode="decimal"><label class="offer"><input id="oYearly" type="checkbox"> Available</label></div>
+        <div><label for="pLifetime">Lifetime (one-time)</label><input id="pLifetime" inputmode="decimal"><label class="offer"><input id="oLifetime" type="checkbox"> Available</label></div>
+      </div>
+      <div style="max-width:220px"><label for="pDemo">Demo (7 days)</label><input id="pDemo" inputmode="decimal"><label class="offer"><input id="oDemo" type="checkbox"> Available</label><div class="hint">Normally 0 = free. Switched off = nobody can register by themselves.</div></div>
+      <div class="hint">Switching a tier off hides it from clients and stops you giving it to another client. Clients who already have it keep it and you can still renew them on it.</div>
+    </div>
+    <div class="card">
+      <h2>Resort limit and extra resorts</h2>
+      <p class="sub">Every client can set up this many resorts by themselves. When they try to add more, the app sends you a request (you get an email, and the client shows "Wants +1 resort" in the Clients list). Nothing is added until you approve. Each approved extra resort adds the fee below <b>for every month</b> of the client's plan to their subscription total: with a fee of 50, one extra resort adds 50 to Monthly, 150 to Quarterly and 600 to Yearly. Lifetime clients owe it as a separate monthly amount.</p>
+      <div class="grid3">
+        <div><label for="rInc">Resorts included in every plan</label><input id="rInc" type="number" min="1" max="100" step="1"></div>
+        <div><label for="rFee">Fee per extra resort, per month</label><input id="rFee" inputmode="decimal"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Renewal contact info</h2>
+      <p class="sub">How clients reach you to renew. Shown next to the prices. Leave a field empty to hide it. Changes reach every client within about 10 minutes.</p>
+      <label for="cNote">Message</label>
+      <textarea id="cNote" rows="2" maxlength="300"></textarea>
+      <div class="grid2">
+        <div><label for="cUrl">Renewal link (URL)</label><input id="cUrl" type="url" placeholder="https://..."></div>
+        <div><label for="cPhone">Phone</label><input id="cPhone" type="tel" placeholder="+63 ..."></div>
+        <div><label for="cEmail">Email</label><input id="cEmail" type="email" placeholder="you@example.com"></div>
+        <div><label for="cProduct">Product name (used in emails)</label><input id="cProduct" maxlength="80"></div>
+      </div>
+      <div class="msg" id="priceMsg"></div>
+      <div style="margin-top:6px"><button class="btn pri" id="btnSavePricing" type="button">Save prices and renewal info</button></div>
+    </div>
+  </section>
+
+  <!-- ============ TERMS AND CONDITIONS ============ -->
+  <section id="tab_terms" style="display:none">
+    <div class="card">
+      <h2>Terms and Conditions for new clients</h2>
+      <p class="sub">A new client must tick "I have read and accept the Terms and Conditions" before they can register. The link opens the text below, served by your Booking App at <b>your app link?page=terms</b>. Clients who registered earlier are not asked. The date a client accepted is kept in the Clients sheet (column "Terms Accepted").</p>
+      <label class="chk"><input id="tReq" type="checkbox"> New clients must accept the Terms and Conditions to register</label>
+      <div class="warnbox" id="tWarn"></div>
+      <label for="tText">Terms and Conditions text</label>
+      <textarea id="tText" spellcheck="true"></textarea>
+      <div class="hint">Plain text. A line that starts with ## becomes a heading and **words** become bold. Saving sets "Last updated" to today. <span id="tUpd"></span></div>
+      <label for="tUrl">Use my own link instead (optional)</label>
+      <input id="tUrl" type="url" placeholder="https://... (leave empty to show the text above)">
+      <div class="hint">If you already publish your terms somewhere (website, Google Doc published to the web), paste the link and clients are sent there instead.</div>
+      <div class="msg" id="termsMsg"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <button class="btn pri" id="btnSaveTerms" type="button">Save terms</button>
+        <a class="sheet-link" id="tView" target="_blank" rel="noopener noreferrer" style="display:none;padding:9px 14px">View what clients see</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ALERTS & SETUP ============ -->
+  <section id="tab_alerts" style="display:none">
+    <div class="card">
+      <h2>Client activity thresholds</h2>
+      <p class="sub">Based on the last successful direct client PIN login. Provider dashboard links, public calendars and subscription checks do not count. The gap after Actively using and before Rarely using is labeled Less active.</p>
+      <div class="grid3"><div><label for="aActiveDays">Actively using: within days</label><input id="aActiveDays" type="number" min="0.01" step="any" value="2"><div class="hint">2 days = 48 hours</div></div><div><label for="aRareDays">Rarely using: after days</label><input id="aRareDays" type="number" min="0.01" step="any" value="7"></div><div><label for="aRiskDays">Possible non-renewal: after days</label><input id="aRiskDays" type="number" min="0.01" step="any" value="14"></div></div>
+      <button class="btn pri" id="btnSaveActivity" type="button" style="margin-top:14px">Save activity thresholds</button><div id="activityMsg" class="msg"></div>
+    </div>
+    <div class="card">
+      <h2>System email sender</h2>
+      <p class="sub">Choose the account used for License Admin system and notification emails, including license keys, payment notices, referral messages, partner PIN codes and scheduled alerts.</p>
+      <label for="cSenderEmail">Sender account</label><select id="cSenderEmail"><option value="">Deploying Google account (default)</option></select>
+      <div class="grid2"><div><label for="cSenderName">Sender display name (optional)</label><input id="cSenderName" maxlength="100" placeholder="RDbookingMS"></div><div><label for="cSenderReply">Reply-to email (optional)</label><input id="cSenderReply" type="email" maxlength="120" placeholder="support@example.com"></div></div>
+      <p class="hint">To use another account, add and verify its address in the deploying account's Gmail settings under Accounts → Send mail as, then refresh the list below. Google handles the account connection; no email password is stored here. Updating this sender does not change who receives admin alerts.</p>
+      <div class="msg" id="senderMsg" aria-live="polite"></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button class="btn" id="btnRefreshSenders" type="button">Refresh sender accounts</button><button class="btn pri" id="btnSaveSender" type="button">Save email sender</button></div>
+    </div>
+    <div class="card">
+      <h2>Self-registration and the one-time Demo</h2>
+      <p class="sub">When this is on, a new client can open the app, choose "Start a free 7-day demo" and be added here automatically with their own license key. Each email address gets one Demo, ever. You are emailed about every sign-up, and you can still give another Demo yourself (the "Allow another Demo" box).</p>
+      <label class="chk"><input id="cSelf" type="checkbox"> Let new clients register themselves for the 7-day Demo</label>
+    </div>
+    <div class="card">
+      <h2>Expiry alerts and automatic revoke</h2>
+      <p class="sub">A subscription that reaches its end loses access by itself: the app locks at midnight on the expiry date and the client is marked "Revoked". You are emailed about expired clients within the hour, and every morning about clients that reached one of the marks below.</p>
+      <div class="grid2">
+        <div><label for="cAlertEmail">Send alerts to</label><input id="cAlertEmail" type="email" placeholder="empty = your own Google account"></div>
+        <div><label for="cAlertDays">Alert when this many days are left</label><input id="cAlertDays" placeholder="7, 3, 1"></div>
+      </div>
+      <label class="chk"><input id="cClients" type="checkbox"> Also email the reminder (with prices and renewal info) to the client's registered address</label>
+      <label class="chk"><input id="cPendAl" type="checkbox"> Email me about pending payments: a list every morning while receipts are waiting, and at once when one waits longer than the review time</label>
+      <div class="msg" id="alertMsg"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <button class="btn pri" id="btnSaveAlerts" type="button">Save these settings</button>
+        <button class="btn" id="btnRunAlerts" type="button">Check expiries and send alerts now</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>License Server URL</h2>
+      <p class="sub">The web app URL of this project (Deploy &gt; Manage deployments). Paste it here once so it is easy to copy. The same URL goes into <b>LICENSE_SERVER_URL</b> near the end of the booking app's Code.gs.</p>
+      <label for="cServer">Web app URL (ends with /exec)</label>
+      <input id="cServer" type="url" placeholder="https://script.google.com/macros/s/.../exec">
+      <div class="msg" id="serverMsg"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <button class="btn pri" id="btnSaveServer" type="button">Save URL</button>
+        <button class="btn" id="btnCopyServer" type="button">Copy URL</button>
+      </div>
+      <p class="hint" id="tzHint"></p>
+    </div>
+    <div class="card">
+      <h2>Payment QR code and instructions</h2>
+      <p class="sub">Shown to clients with every renewal notice ("Pay now"): on the lock screen when a plan has ended, in the reminder banner, and under "Your subscription". Upload the QR code picture from your payment app (GCash, Maya, bank...). Clients scan it, pay the amount the app shows them, and upload a screenshot of the receipt. You then get an email and the receipt appears under Payments &amp; finance.</p>
+      <div class="qrbox">
+        <div id="qrPrev"></div>
+        <div style="flex:1;min-width:240px">
+          <label for="qrFile">QR code picture (PNG or JPG)</label>
+          <input id="qrFile" type="file" accept="image/png,image/jpeg">
+          <div class="hint">The picture is resized to 420 pixels and kept in your Drive (folder "License Admin Files").</div>
+          <label for="cPayNote">Instructions shown with the QR code</label>
+          <textarea id="cPayNote" rows="2" maxlength="300"></textarea>
+          <div style="max-width:220px"><label for="cHours">Receipts are checked within (hours)</label><input id="cHours" type="number" min="1" max="240" step="1"></div>
+          <div class="hint">Clients see: "Receipts are checked within 48 hours. Need access right away? Contact us" with your renewal phone and email from the Pricing tab.</div>
+        </div>
+      </div>
+      <div class="msg" id="qrMsg"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <button class="btn pri" id="btnSavePay" type="button">Save payment settings</button>
+        <button class="btn" id="btnQrRemove" type="button">Remove QR code</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Booking App URL</h2>
+      <p class="sub">The shared web app URL of the Booking App project. It is filled in by itself the first time a client uses the app - check that it is yours. Each client's "Copy login link" uses this address and still requires their Booking PIN. "Open dashboard" is your separate provider access without their PIN.</p>
+      <label for="cApp">Booking App URL (the /exec link, or your banner-free page such as https://yourname.github.io/rdbooking/)</label>
+      <input id="cApp" type="url" placeholder="https://yourname.github.io/rdbooking/">
+      <div class="msg" id="appMsg"></div>
+      <div style="margin-top:6px"><button class="btn pri" id="btnSaveApp" type="button">Save URL</button></div>
+    </div>
+  </section>
+</div>
+
+<!-- add / edit client -->
+<div class="bg" id="edBg">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="edTitle">
+    <h3 id="edTitle">Add client</h3>
+    <label for="eName">Business name</label><input id="eName" maxlength="100">
+    <div class="grid2">
+      <div><label for="eEmail">Registered email</label><input id="eEmail" type="email" maxlength="120" placeholder="client@gmail.com"></div>
+      <div><label for="ePhone">Phone (optional)</label><input id="ePhone" type="tel" maxlength="40"></div>
+    </div>
+    <div class="hint">The client's own email address. PIN reset codes go there, and a Google account with this address gets view-only access to their booking sheet (which lives in your Google Drive).</div>
+    <label for="eExtra">Extra emails (optional - only checked by per-client copies with Google sign-in)</label><input id="eExtra" maxlength="400" placeholder="staff1@gmail.com, staff2@gmail.com">
+    <div class="grid3">
+      <div><label for="eTier">Tier</label><select id="eTier"></select></div>
+      <div><label for="eStart">Start date</label><input id="eStart" type="date"></div>
+      <div><label for="eExpiry">Expiry date</label><input id="eExpiry" type="date"></div>
+    </div>
+    <div class="hint" id="eExpHint"></div>
+    <label for="eXr">Extra resorts approved (on top of the included ones)</label><input id="eXr" type="number" min="0" max="50" step="1" value="0" style="max-width:160px">
+    <label class="chk"><input id="eFreeResorts" type="checkbox"> Unlimited resorts at no extra charge</label>
+    <div class="hint">Exempts this client from all extra-resort fees and approval limits. Existing resorts and approved counts are retained.</div>
+    <div class="hint" id="eXrHint"></div>
+    <label for="eRefBy">Referred by (referral code of a client or partner, optional)</label><input id="eRefBy" maxlength="12" style="max-width:200px;text-transform:uppercase" autocomplete="off">
+    <div class="hint" id="eRefHint"></div>
+    <label class="chk"><input id="eRefExcluded" type="checkbox"> Exclude this client from the referral program</label>
+    <div class="hint">Disables this client's referral code and discounts, and stops their subscription from generating discounts or partner earnings for others. Existing credits and attribution are retained. Excluded service dates stay ineligible for partner credits after participation is restored.</div>
+    <label class="chk"><input id="eFinExcluded" type="checkbox"> Exclude this client from financial reports</label>
+    <div class="hint">Leaves this client's payments out of all revenue totals, charts, monthly value and renewal forecasts. Applies to their full payment history. Payment records remain available; access and referral participation are managed separately.</div>
+    <label class="chk" id="eOverBox" style="display:none"><input id="eOver" type="checkbox"> Allow another Demo for this email (override the one-time rule)</label>
+    <label for="eNotes">Notes (only you see these)</label><textarea id="eNotes" rows="2" maxlength="500"></textarea>
+    <div class="msg" id="edMsg"></div>
+    <div class="foot">
+      <button class="btn danger" id="btnDel" type="button" style="margin-right:auto">Delete client</button>
+      <button class="btn" data-close type="button">Cancel</button>
+      <button class="btn pri" id="btnSaveClient" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- log a payment: renewal / advance payment -->
+<div class="bg" id="pyBg">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="pyTitle">
+    <h3 id="pyTitle">Log a payment</h3>
+    <label for="pyClient">Client</label><select id="pyClient"></select>
+    <div class="hint" id="pyWho"></div>
+    <div class="keybox" id="pyReceipt" style="display:none;border-style:solid"></div>
+    <div class="grid3">
+      <div><label for="pyType">Type</label><select id="pyType"></select></div>
+      <div><label for="pyTier">Tier paid for</label><select id="pyTier"></select></div>
+      <div><label for="pyPeriods">How many periods</label><input id="pyPeriods" type="number" min="1" max="60" step="1" value="1"></div>
+    </div>
+    <div class="grid3">
+      <div><label for="pyAmount">Amount paid (<span id="pyCur"></span>)</label><input id="pyAmount" inputmode="decimal"></div>
+      <div><label for="pyDate">Date paid</label><input id="pyDate" type="date"></div>
+      <div><label for="pyMethod">Method</label><input id="pyMethod" list="pyMethods" maxlength="40" placeholder="Cash, GCash..."><datalist id="pyMethods"><option>Cash</option><option>GCash</option><option>Maya</option><option>Bank transfer</option><option>PayPal</option><option>Card</option></datalist></div>
+    </div>
+    <div class="hint" id="pyPriceHint"></div>
+    <div class="grid2"><div><label for="pyDiscountType">Manual discount (optional)</label><select id="pyDiscountType"><option value="none">No manual discount</option><option value="fixed">Fixed amount</option><option value="percent">Percentage of total due</option></select></div><div><label for="pyDiscountValue">Discount value</label><input id="pyDiscountValue" type="number" min="0" step="any" value="0" disabled></div></div>
+    <div class="keybox" id="pyDiscountSummary" aria-live="polite"></div>
+    <label for="pyRef">Reference no. (optional)</label><input id="pyRef" maxlength="80">
+    <label for="pyNotes">Notes (optional)</label><input id="pyNotes" maxlength="300">
+    <label class="chk"><input id="pyExtend" type="checkbox" checked> Extend the subscription with this payment</label>
+    <label class="chk" id="pyOverBox" style="display:none"><input id="pyOver" type="checkbox"> Allow another Demo for this email (override the one-time rule)</label>
+    <div class="keybox" id="pyPreview" style="border-style:solid"></div>
+    <div class="msg" id="pyMsg"></div>
+    <div class="foot"><button class="btn" data-close type="button">Cancel</button><button class="btn pri" id="btnDoPay" type="button">Save payment</button></div>
+  </div>
+</div>
+
+<!-- license key / what to send the client -->
+<div class="bg" id="kyBg">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="kyTitle">
+    <h3 id="kyTitle">License key</h3>
+    <p class="hint" id="kyWho" style="font-size:13.5px"></p>
+    <div class="keybox"><div class="k" id="kyKey"></div></div>
+    <p class="hint" style="font-size:13px">Send the direct login link to the client (<b id="kyEmail"></b>) to select their business on any device without typing the license key. Their Booking PIN is still required. Keep the key above as a backup.</p>
+    <label for="kyDirectLink">Direct login link (Booking PIN required)</label>
+    <input id="kyDirectLink" readonly aria-describedby="kyLinkMsg" placeholder="Preparing login link...">
+    <p class="hint" id="kyLinkMsg">Keep this link private, like the license key. It does not grant Admin access or extend an expired plan.</p>
+    <div class="foot"><button class="btn" id="btnCopyMsg" type="button">Copy message for the client</button><button class="btn" id="btnCopyKey" type="button">Copy key</button><button class="btn" id="btnCopyLoginLink" type="button" disabled>Copy login link</button><button class="btn pri" data-close type="button">Done</button></div>
+  </div>
+</div>
+
+<!-- open a client's dashboard without their PIN -->
+<div class="bg" id="dbBg">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dbTitle" style="max-width:460px">
+    <h3 id="dbTitle">Open dashboard</h3>
+    <p class="hint" id="dbWho" style="font-size:13.5px"></p>
+    <p style="margin:14px 0"><a class="btnlink" id="dbLink" target="_blank" rel="noopener noreferrer">Open the dashboard</a></p>
+    <p class="hint">This link works once and for 5 minutes. It opens the client's booking app in a new tab without their PIN, with their Admin Settings unlocked, even if their subscription has ended. Your access stops after 1 hour without use, or when you close the tab. The client's PIN is not changed.</p>
+    <div class="foot"><button class="btn pri" data-close type="button">Done</button></div>
+  </div>
+</div>
+
+<!-- reject a receipt -->
+<div class="bg" id="rjBg">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="rjTitle" style="max-width:440px">
+    <h3 id="rjTitle">Reject this receipt?</h3>
+    <p class="hint" id="rjWho" style="font-size:13.5px"></p>
+    <label for="rjReason">Reason (sent to the client, optional)</label><input id="rjReason" maxlength="300" placeholder="The picture is not readable / the amount does not match...">
+    <div class="msg" id="rjMsg"></div>
+    <div class="foot"><button class="btn" data-close type="button">Keep</button><button class="btn danger" id="btnDoReject" type="button">Reject</button></div>
+  </div>
+</div>
+
+<!-- delete confirm -->
+<div class="bg" id="dlBg">
+  <div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlTitle" style="max-width:420px">
+    <h3 id="dlTitle">Delete this client?</h3>
+    <p class="hint" id="dlWho" style="font-size:13.5px"></p>
+    <div class="foot"><button class="btn" data-close type="button">Keep</button><button class="btn danger" id="btnDoDel" type="button">Delete</button></div>
+  </div>
+</div>
+
+<!-- add / edit an expense -->
+<div class="bg" id="xpBg">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="xpTitle">
+    <h3 id="xpTitle">Add expense</h3>
+    <label for="xLabel">Label (what it is)</label><input id="xLabel" maxlength="100" placeholder="Domain name, Google Workspace, laptop repair...">
+    <div class="grid2">
+      <div><label for="xCat">Category (optional)</label><input id="xCat" maxlength="40" list="xCats" placeholder="Software, Marketing..."><datalist id="xCats"><option>Software</option><option>Hosting</option><option>Marketing</option><option>Equipment</option><option>Fees</option><option>Salaries</option><option>Other</option></datalist></div>
+      <div><label for="xAmount">Amount (<span id="xCur"></span>)</label><input id="xAmount" inputmode="decimal"></div>
+    </div>
+    <label>Kind</label>
+    <div class="seg" id="xKindSeg" role="group" aria-label="Kind of expense"><button type="button" data-kind="One-time" class="on">One-time</button><button type="button" data-kind="Subscription">Subscription</button></div>
+    <div id="xSubBox" style="display:none">
+      <div class="grid3">
+        <div><label for="xInterval">Charged</label><select id="xInterval"><option value="Monthly">Every month</option><option value="Yearly">Every year</option><option value="Custom">Custom: every N days</option></select></div>
+        <div id="xDaysBox" style="display:none"><label for="xDays">Days between charges</label><input id="xDays" type="number" min="1" max="3650" step="1" placeholder="e.g. 90"></div>
+        <div><label for="xEnd">End date (optional)</label><input id="xEnd" type="date"></div>
+      </div>
+    </div>
+    <div style="max-width:220px"><label for="xStart" id="xStartLbl">Date paid</label><input id="xStart" type="date"></div>
+    <div class="hint" id="xHint"></div>
+    <label for="xNotes">Notes (optional)</label><input id="xNotes" maxlength="300">
+    <div class="msg" id="xpMsg"></div>
+    <div class="foot">
+      <button class="btn danger" id="btnExpDel" type="button" style="margin-right:auto">Delete</button>
+      <button class="btn" data-close type="button">Cancel</button>
+      <button class="btn pri" id="btnExpSave" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- add / edit a referral partner -->
+<div class="bg" id="rpBg">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="rpTitle" style="max-width:480px">
+    <h3 id="rpTitle">Add partner</h3>
+    <label for="rpName">Name</label><input id="rpName" maxlength="100">
+    <div class="grid2">
+      <div><label for="rpEmail">Email</label><input id="rpEmail" type="email" maxlength="120"></div>
+      <div><label for="rpPhone">Phone (optional)</label><input id="rpPhone" type="tel" maxlength="40"></div>
+    </div>
+    <label for="rpStatus">Status</label><select id="rpStatus" style="max-width:220px"><option value="Active">Active</option><option value="Blocked">Blocked (cannot sign in, code stops working)</option></select>
+    <div class="grid2"><div><label for="rpShare">Commission (%)</label><input id="rpShare" type="number" min="0" max="100" step="any" placeholder="Use program default"><div class="hint">Blank uses the program default; 0 disables new earnings for this partner.</div></div><div><label for="rpPeriod">Earning period</label><select id="rpPeriod"><option value="default">Program default</option><option value="months">Fixed number of months</option><option value="lifetime">Lifetime</option></select><label for="rpMonths" id="rpMonthsLabel" hidden>Number of months</label><input id="rpMonths" type="number" min="1" max="120" step="1" value="12" hidden></div></div>
+    <div class="hint">Overrides apply to future uncredited monthly rewards. Existing credited earnings are retained.</div>
+    <label for="rpNotes">Notes (only you see these)</label><input id="rpNotes" maxlength="300">
+    <div class="hint" id="rpHint"></div>
+    <div class="msg" id="rpMsg"></div>
+    <div class="foot"><button class="btn" data-close type="button">Cancel</button><button class="btn pri" id="btnRpSave" type="button">Save</button></div>
+  </div>
+</div>
+
+<!-- log a payout to a partner -->
+<div class="bg" id="poBg">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="poTitle">
+    <h3 id="poTitle">Log a payout</h3>
+    <p class="hint" id="poWho" style="font-size:13.5px"></p>
+    <div class="keybox" id="poDetails" style="border-style:solid"></div>
+    <div class="grid3">
+      <div><label for="poAmount">Amount paid (<span id="poCur"></span>)</label><input id="poAmount" inputmode="decimal"></div>
+      <div><label for="poDate">Date paid</label><input id="poDate" type="date"></div>
+      <div><label for="poMethod">Method</label><input id="poMethod" maxlength="40" list="pyMethods"></div>
+    </div>
+    <label for="poRef">Reference no. (optional)</label><input id="poRef" maxlength="80">
+    <label for="poNotes">Notes (optional)</label><input id="poNotes" maxlength="300">
+    <label class="chk" id="poForceBox" style="display:none"><input id="poForce" type="checkbox"> Pay more than the balance (advance)</label>
+    <div class="hint">Send the money yourself first (the partner's details and QR code are above), then save it here. The partner is emailed and sees it in their payout history.</div>
+    <div class="msg" id="poMsg"></div>
+    <div class="foot"><button class="btn" data-close type="button">Cancel</button><button class="btn pri" id="btnPoSave" type="button">Save payout</button></div>
+  </div>
+</div>
+
+<!-- a partner's referred clients / payout QR code -->
+<div class="bg" id="rvBg">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="rvTitle" style="max-width:720px">
+    <h3 id="rvTitle"></h3>
+    <div id="rvBody" style="margin-top:10px"></div>
+    <div class="foot"><button class="btn pri" data-close type="button">Done</button></div>
+  </div>
+</div>
+
+<div id="busy"><div>Working...</div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  var TOKEN = '';
+  try { TOKEN = sessionStorage.getItem('la_tok') || ''; } catch (e0) {}
+  var S = { clients: [], payments: [], config: { prices: {}, offered: {} }, stats: null, tiers: [], paymentTypes: [], today: '', serverUrl: '', terms: { text: '', updated: '' } };
+  var MONTHS_IN = { Demo: 0, Monthly: 1, Quarterly: 3, Yearly: 12, Lifetime: 0 };      // months the extra-resort fee is charged for in one period
+  var TIER_RULES = { Demo: {days: 7}, Monthly: {months: 1}, Quarterly: {months: 3}, Yearly: {months: 12}, Lifetime: {forever: true} };
+  var PERIOD = { Demo: 'for 7 days', Monthly: 'per month', Quarterly: 'every 3 months', Yearly: 'per year', Lifetime: 'one-time' };
+  var editing = null, keyFor = null, expiryTouched = false, amountTouched = false, typeTouched = false, payReceipt = null, rejecting = null, qrPending = null;
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(t) { var d = document.createElement('div'); d.textContent = (t === null || t === undefined) ? '' : String(t); return d.innerHTML; }
+
+  /* ---------- dates and money ---------- */
+  function ymdDays(s) { var p = s.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000; }
+  function addDays(s, n) { return new Date((ymdDays(s) + n) * 86400000).toISOString().slice(0, 10); }
+  function addMonths(s, n) {
+    var p = s.split('-'), y = +p[0], m = +p[1] - 1 + n, d = +p[2];
+    y += Math.floor(m / 12); m = ((m % 12) + 12) % 12;
+    var last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(y, m, Math.min(d, last))).toISOString().slice(0, 10);
+  }
+  function expiryFor(tier, from, periods) {
+    var t = TIER_RULES[tier], n = Math.max(1, Math.floor(Number(periods) || 1));
+    if (!t || t.forever || !from) return '';
+    return t.days ? addDays(from, t.days * n) : addMonths(from, t.months * n);
+  }
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function nice(s) { if (!s) return ''; var p = s.split('-'); return MON[+p[1] - 1] + ' ' + (+p[2]) + ', ' + p[0]; }
+  function money(n) {
+    n = Math.round((Number(n) || 0) * 100) / 100;
+    var p = (n % 1 === 0 ? String(n) : n.toFixed(2)).split('.');
+    p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (S.config.currency || '') + p.join('.');
+  }
+  function priceOf(tier) { return Number((S.config.prices || {})[tier]) || 0; }
+  function offered(tier) { return !S.config.offered || S.config.offered[tier] !== false; }
+  function extraFee() { return Number(S.config.extraFee) || 0; }
+  // what a client's extra resorts add to one period of a tier, and the subscription total of that period
+  function extraOf(c, tier) { return c && c.freeResorts ? 0 : Math.round(extraFee() * ((c && c.extraResorts) || 0) * (MONTHS_IN[tier] || 0) * 100) / 100; }
+  function discOf(c) { return Math.min(100, Math.max(0, Number(c && c.discountPct) || 0)); }      // referral discount in percent
+  function totalOf(c, tier) { return Math.round((priceOf(tier) + extraOf(c, tier)) * (1 - (MONTHS_IN[tier] ? discOf(c) : 0) / 100) * 100) / 100; }
+  function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+
+  /* ---------- server calls ---------- */
+  function busy(on) { $('busy').style.display = on ? 'flex' : 'none'; }
+  var toastT = null;
+  function toast(m, bad) {
+    var t = $('toast'); t.textContent = m; t.className = bad ? 'bad' : ''; t.style.display = 'block';
+    clearTimeout(toastT); toastT = setTimeout(function () { t.style.display = 'none'; }, bad ? 7000 : 3500);
+  }
+  function call(name, args, done, msgId, onFail) {
+    busy(true);
+    var r = google.script.run
+      .withSuccessHandler(function (v) {
+        busy(false);
+        if (v && v.expired) { setToken(''); showLogin(v.mustChange ? '' : v.message); return; }
+        if (v && v.ok === false) { if (onFail) onFail(v); if (msgId) $(msgId).textContent = v.message; else toast(v.message, true); return; }
+        if (v && v.clients) load(v);
+        if (done) done(v);
+      })
+      .withFailureHandler(function (e) { busy(false); var m = (e && e.message) || String(e); if (msgId) $(msgId).textContent = m; else toast(m, true); });
+    r.adminCall(TOKEN, name, args || []);
+  }
+  function load(v) {
+    S = v;
+    $('me').textContent = (v.me ? 'Signed in as ' + v.me + '  |  ' : '') + 'Today: ' + nice(v.today);
+    $('lgBg').style.display = 'none'; $('app').style.display = '';
+    fillConfig(); render(); renderMoney(); renderExpenses(); renderRef();
+  }
+
+  /* ---------- clients list ---------- */
+  function isSoon(c) { return c.status === 'active' && !c.lifetime && c.daysLeft <= 7; }
+  function isSelf(c) { return /^self/i.test(c.source || ''); }
+  function statusBadge(c) {
+    if (c.status === 'disabled') return '<span class="badge b-off">Switched off</span>';
+    if (c.status === 'expired') return '<span class="badge b-bad">Expired - revoked</span>';
+    if (isSoon(c)) return '<span class="badge b-warn">Expiring</span>';
+    return '<span class="badge b-ok">Active</span>';
+  }
+  function leftText(c) {
+    if (c.lifetime) return 'Never expires';
+    if (c.daysLeft < 0) return (-c.daysLeft) + ' day' + (c.daysLeft === -1 ? '' : 's') + ' ago';
+    if (c.daysLeft === 0) return 'Last day today';
+    return c.daysLeft + ' day' + (c.daysLeft === 1 ? '' : 's') + ' left';
+  }
+  function render() {
+    var a = 0, s = 0, x = 0, o = 0;
+    S.clients.forEach(function (c) {
+      if (c.status === 'disabled') o++; else if (c.status === 'expired') x++; else if (!c.financialExcluded) { a++; if (isSoon(c)) s++; }
+    });
+    $('nActive').textContent = a; $('nSoon').textContent = s; $('nExpired').textContent = x; $('nOff').textContent = o;
+    var st = S.stats || {};
+    $('mMonth').textContent = money(st.month); $('mMonthS').textContent = 'Last month: ' + money(st.lastMonth);
+    $('mYear').textContent = money(st.year); $('mYearS').textContent = (st.count || 0) + ' payment' + (st.count === 1 ? '' : 's') + ' logged in total';
+    $('mMrr').textContent = money(st.mrr); $('mMrrS').textContent = (st.paying || 0) + ' paying client' + (st.paying === 1 ? '' : 's');
+    $('mDue').textContent = money(st.due30); $('mDueS').textContent = (st.due30Count || 0) + ' client' + (st.due30Count === 1 ? '' : 's') + ' to renew';
+
+    var q = $('q').value.trim().toLowerCase(), fs = $('fStatus').value, ft = $('fTier').value;
+    var rows = S.clients.filter(function (c) {
+      if (q && (c.name + ' ' + c.email + ' ' + c.extra + ' ' + c.key + ' ' + c.phone).toLowerCase().indexOf(q) < 0) return false;
+      if ($('fUsage').value && (!c.activity || c.activity.status !== $('fUsage').value)) return false;
+      if (fs === 'request') return !!c.resortRequest;
+      if (fs === 'cancelled') return !!c.cancelled;
+      if (ft && c.tier !== ft) return false;
+      if (fs === 'soon') return isSoon(c);
+      if (fs === 'self') return isSelf(c);
+      if (fs && c.status !== fs) return false;
+      return true;
+    });
+    rows.sort(function (p, r) {          // the ones that need attention first
+      function w(c) { return c.resortRequest ? -1 : c.status === 'expired' ? 0 : c.status === 'disabled' ? 3 : c.lifetime ? 2 : 1; }
+      var d = w(p) - w(r); if (d) return d;
+      if (!p.lifetime && !r.lifetime && p.daysLeft !== r.daysLeft) return p.daysLeft - r.daysLeft;
+      return p.name.localeCompare(r.name);
+    });
+    if (!S.clients.length) { $('list').innerHTML = '<div class="empty">No clients yet. Choose <b>+ Add client</b>, or wait for the first client to register for a Demo from the app.</div>'; return; }
+    if (!rows.length) { $('list').innerHTML = '<div class="empty">No clients match this search.</div>'; return; }
+    var h = '<table><thead><tr><th>Client</th><th>Tier / price</th><th>Status</th><th>Expires</th><th>Direct login / usage</th><th>Access</th><th></th></tr></thead><tbody>';
+    rows.forEach(function (c) {
+      var k = esc(c.key), pr = totalOf(c, c.tier), xr = c.extraResorts || 0, inc = Number(S.config.includedResorts) || 2;
+      var xrLine = c.freeResorts ? '<div class="em">Unlimited resorts · no extra charge</div>' : '<div class="em">' + (inc + xr) + ' resorts' + (xr ? ' (' + inc + ' + ' + xr + ' extra' + (extraOf(c, c.tier) ? ': +' + esc(money(extraOf(c, c.tier))) : (c.tier === 'Lifetime' && extraFee() ? ': +' + esc(money(extraFee() * xr)) + ' per month' : '')) + ')' : '') + '</div>';
+      var req = c.resortRequest ? '<div class="reqbox"><span class="badge b-req">Wants +' + c.resortRequest + ' resort' + (c.resortRequest === 1 ? '' : 's') + '</span>' +
+        '<button class="btn sm pri" data-rq="1" data-k="' + k + '" type="button">Approve</button><button class="btn sm" data-rq="0" data-k="' + k + '" type="button">Decline</button></div>' : '';
+      h += '<tr><td><div class="nm">' + esc(c.name) + (isSelf(c) ? '<span class="badge b-self">Self-registered</span>' : '') + (c.cancelled ? '<span class="badge b-cancel" title="Cancelled on ' + esc(c.cancelledOn) + ': no renewal notices, access until expiry">Cancelled</span>' : '') + '</div><div class="em">' + esc(c.email) + (c.phone ? ' &middot; ' + esc(c.phone) : '') + '</div>' + req + '</td>' +
+        '<td data-l="Tier"><span class="badge b-tier">' + esc(c.tier) + '</span><div class="em">' + (c.tier === 'Demo' && !pr ? 'Free' : pr ? esc(money(pr)) + ' ' + PERIOD[c.tier] : 'No price set') + '</div>' + xrLine + refLine(c) + '</td>' +
+        '<td data-l="Status">' + statusBadge(c) + '</td>' +
+        '<td data-l="Expires">' + (c.lifetime ? 'Never' : esc(nice(c.expiry)) + '<div class="em">' + esc(leftText(c)) + '</div>') + '</td>' +
+        '<td data-l="Direct login"><span class="em">' + (c.directLogin ? esc(c.directLogin) : 'Not recorded yet') + '</span><div><span class="badge ' + (c.activity && c.activity.status === 'active' ? 'b-ok' : c.activity && c.activity.status === 'risk' ? 'b-bad' : c.activity && c.activity.status === 'rare' ? 'b-warn' : 'b-off') + '">' + esc(c.activity ? c.activity.label : 'No direct login recorded') + '</span></div></td>' +
+        '<td data-l="Access"><label class="sw" title="' + (c.status === 'expired' ? 'Revoked automatically at expiry. Log a renewal to give access back.' : 'Turn this client\'s access on or off') + '"><input type="checkbox" data-acc="' + k + '"' + (c.access ? ' checked' : '') +
+        ' aria-label="Access for ' + esc(c.name) + '"><span></span></label></td>' +
+        '<td><div class="acts"><button class="btn sm pri" data-pay="' + k + '" type="button">Renew / payment</button>' +
+        '<button class="btn sm" data-key="' + k + '" type="button">Key</button>' +
+        '<button class="btn sm" data-loginlink="' + k + '" type="button" title="Copy this client\'s reusable link; Booking PIN is still required">Copy login link</button>' +
+        (c.cancelled ? '<button class="btn sm" data-uncancel="' + k + '" type="button" title="The client gets renewal notices again">Undo cancel</button>' : '') +
+        (c.sheetId ? '<button class="btn sm" data-dash="' + k + '" type="button" title="Open this client\'s booking app without their PIN">Open dashboard</button>' : '') +
+        (c.sheetId && /^[A-Za-z0-9_-]{20,120}$/.test(c.sheetId) ? '<a class="sheet-link" target="_blank" rel="noopener noreferrer" href="https://docs.google.com/spreadsheets/d/' + esc(c.sheetId) + '/edit">Google Sheet</a>' : '') +
+        '<button class="btn sm" data-edit="' + k + '" type="button">Edit</button></div></td></tr>';
+    });
+    $('list').innerHTML = h + '</tbody></table>';
+  }
+  function refLine(c) {
+    if (!c.refCode) return '';
+    var h = (c.referralExcluded ? '<div><span class="badge b-off">Referral excluded</span></div>' : '') + '<div class="em" style="margin-top:3px"><span class="badge b-code" data-copy="' + esc(c.refCode) + '" title="Referral code - click to copy">' + esc(c.refCode) + '</span>' +
+            (c.refTotal ? ' ' + c.refActive + '/' + c.refTotal + ' active' : '') + (c.discountPct ? ' &middot; <b>' + c.discountPct + '% off</b>' : '') + '</div>';
+    if (c.refBy) h += '<div class="em">Referred by ' + esc(c.refByName || c.refBy) + (c.refByType === 'partner' ? ' (partner)' : '') + '</div>';
+    return h;
+  }
+  function byKey(k) { for (var i = 0; i < S.clients.length; i++) if (S.clients[i].key === k) return S.clients[i]; return null; }
+
+  /* ---------- payments & finance ---------- */
+  function renderMoney() {
+    var st = S.stats || { months: [], byTier: {}, byType: {} };
+    $('fMonth').textContent = money(st.month); $('fLast').textContent = money(st.lastMonth); $('fYear').textContent = money(st.year); $('fAll').textContent = money(st.all);
+    $('fAllS').textContent = (st.count || 0) + ' payment' + (st.count === 1 ? '' : 's');
+    $('financeNote').textContent = st.excludedClients ? st.excludedClients + ' client' + (st.excludedClients === 1 ? ' is' : 's are') + ' excluded from financial totals. Their payment history is retained below.' : 'Totals include all participating clients. Voided payments are excluded.';
+    var max = 0; (st.months || []).forEach(function (m) { if (m.total > max) max = m.total; });
+    $('chart').innerHTML = (st.months || []).map(function (m) {
+      var p = m.ym.split('-');
+      return '<div class="b"><span class="v">' + esc(money(m.total)) + '</span><i style="height:' + (max ? Math.round(m.total / max * 100) : 0) + '%"></i><span class="m">' + MON[+p[1] - 1] + ' ' + p[0].slice(2) + '</span></div>';
+    }).join('');
+    function kv(o, order) {
+      var keys = order.filter(function (k) { return o[k]; }).concat(Object.keys(o).filter(function (k) { return order.indexOf(k) < 0 && o[k]; }));
+      return keys.length ? keys.map(function (k) { return '<div><span>' + esc(k || 'Other') + '</span><b>' + esc(money(o[k])) + '</b></div>'; }).join('') : '<div><span class="hint">Nothing received yet this year.</span></div>';
+    }
+    $('byTier').innerHTML = kv(st.byTier || {}, S.tiers || []); $('byType').innerHTML = kv(st.byType || {}, S.paymentTypes || []);
+
+    var pend = (S.receipts || []).filter(function (r) { return r.status === 'Pending'; });
+    $('nPending').textContent = pend.length;
+    var late = pend.filter(function (r) { return (r.hours || 0) >= (S.config.reviewHours || 48); }).length;
+    $('pendChip').style.display = pend.length ? 'inline-flex' : 'none'; $('pendN').textContent = pend.length;
+    $('pendTxt').textContent = 'pending payment' + (pend.length === 1 ? '' : 's') + (late ? ' (' + late + ' overdue)' : '');
+    $('pendChip').style.background = late ? 'var(--bad-bg)' : ''; $('pendChip').style.color = late ? 'var(--bad)' : '';
+    $('tabPend').style.display = pend.length ? '' : 'none'; $('tabPend').textContent = pend.length;
+    $('rcHours').textContent = S.config.reviewHours || 48;
+    $('rcCount').style.display = pend.length ? '' : 'none'; $('rcCount').textContent = pend.length + ' waiting';
+    if (!pend.length) $('rclist').innerHTML = '<div class="hint">No receipts are waiting. ' + ((S.receipts || []).length ? (S.receipts.length + ' checked so far; they are all in the Receipts sheet.') : '') + '</div>';
+    else {
+      var rh = '<table><thead><tr><th>Received</th><th>Client</th><th>Plan / amount</th><th>Reference / note</th><th>Picture</th><th></th></tr></thead><tbody>';
+      pend.forEach(function (r) {
+        var c = byKey(r.key), expect = c ? totalOf(c, c.tier) : 0;
+        rh += '<tr><td data-l="Received">' + esc(r.at) + ((r.hours || 0) >= (S.config.reviewHours || 48) ? '<div><span class="badge b-bad">Overdue</span></div>' : '<div class="em">' + (r.hours || 0) + ' h ago</div>') + '</td><td><div class="nm">' + esc(r.name) + '</div><div class="em">' + esc(r.email) + '</div></td>' +
+          '<td data-l="Plan">' + esc(r.tier) + '<div class="em">' + (r.amount ? 'Claims ' + esc(money(r.amount)) : 'No amount given') + (expect ? ' &middot; expected ' + esc(money(expect)) + ' ' + PERIOD[c.tier] : '') + '</div></td>' +
+          '<td data-l="Reference"><span class="em">' + esc([r.reference, r.note].filter(Boolean).join(' / ') || '-') + '</span></td>' +
+          '<td data-l="Picture">' + (r.url ? '<a class="rc-img" target="_blank" rel="noopener noreferrer" href="' + esc(r.url) + '">Open receipt</a>' : '-') + '</td>' +
+          '<td><div class="acts"><button class="btn sm pri" data-rclog="' + esc(r.id) + '" type="button">Log payment</button><button class="btn sm" data-rcrej="' + esc(r.id) + '" type="button">Reject</button></div></td></tr>';
+      });
+      $('rclist').innerHTML = rh + '</tbody></table>';
+    }
+    var q = $('pq').value.trim().toLowerCase();
+    var rows = (S.payments || []).filter(function (p) { return !q || (p.name + ' ' + p.email + ' ' + p.reference + ' ' + p.method + ' ' + p.type + ' ' + p.tier + ' ' + p.id).toLowerCase().indexOf(q) >= 0; });
+    if (!(S.payments || []).length) { $('plist').innerHTML = '<div class="empty">No payments logged yet. Use <b>Renew / payment</b> on a client, or <b>+ Log a payment</b>.</div>'; return; }
+    if (!rows.length) { $('plist').innerHTML = '<div class="empty">No payments match this search.</div>'; return; }
+    var h = '<table><thead><tr><th>Date paid</th><th>Client</th><th>Type</th><th>Tier</th><th>Period covered</th><th>Method / ref.</th><th class="num">Amount</th><th></th></tr></thead><tbody>';
+    rows.forEach(function (p) {
+      h += '<tr' + (p.isVoid ? ' class="void"' : '') + '><td data-l="Date paid">' + esc(nice(p.date)) + '</td>' +
+        '<td><div class="nm">' + esc(p.name) + '</div><div class="em">' + esc(p.email) + '</div>' + (p.financialExcluded ? '<span class="badge b-off">Excluded from financial totals</span>' : '') + '</td>' +
+        '<td data-l="Type">' + esc(p.type) + '</td>' +
+        '<td data-l="Tier">' + esc(p.tier) + (p.periods > 1 ? ' &times; ' + p.periods : '') + '</td>' +
+        '<td data-l="Period">' + (p.from ? esc(nice(p.from)) + ' to ' + (p.to ? esc(nice(p.to)) : 'never expires') : '<span class="em">Not extended</span>') + '</td>' +
+        '<td data-l="Method"><span class="em">' + esc([p.method, p.reference].filter(Boolean).join(' / ') || '-') + (p.notes ? '<br>' + esc(p.notes) : '') + '</span></td>' +
+        '<td class="num" data-l="Amount"><b>' + esc(money(p.amount)) + '</b>' + (p.manualDiscount > 0 ? '<div class="em">Manual discount: ' + esc(money(p.manualDiscount)) + (p.discountType === 'percent' ? ' (' + p.discountValue + '%)' : '') + '<br>Net due: ' + esc(money(p.netDue)) + '</div>' : '') + '</td>' +
+        '<td><div class="acts"><button class="btn sm" data-void="' + esc(p.id) + '" data-on="' + (p.isVoid ? '0' : '1') + '" type="button">' + (p.isVoid ? 'Restore' : 'Void') + '</button></div></td></tr>';
+    });
+    $('plist').innerHTML = h + '</tbody></table>';
+  }
+
+  /* ---------- dialogs ---------- */
+  function show(id, on) { $(id).style.display = on ? 'flex' : 'none'; }
+  function fillTiers(sel, cur, withPrice, keep, client) {
+    sel.innerHTML = S.tiers.map(function (t) {
+      var pr = client ? totalOf(client, t) : priceOf(t), off = !offered(t);
+      if (off && t !== keep) return '';                    // switched off in the Pricing tab
+      return '<option value="' + esc(t) + '"' + (t === cur ? ' selected' : '') + '>' + esc(t) + (withPrice && pr ? ' - ' + esc(money(pr)) : '') + (off ? ' (switched off)' : '') + '</option>';
+    }).join('');
+    if (!sel.value && sel.options.length) sel.selectedIndex = 0;
+  }
+  function firstOffered(list) { for (var i = 0; i < list.length; i++) if (offered(list[i])) return list[i]; return list[0]; }
+  function syncExpiry(force) {
+    var tier = $('eTier').value, life = tier === 'Lifetime';
+    $('eExpiry').disabled = life;
+    $('eOverBox').style.display = tier === 'Demo' ? 'flex' : 'none';
+    if (life) { $('eExpiry').value = ''; $('eExpHint').textContent = 'Lifetime never expires.'; return; }
+    $('eExpHint').textContent = 'The expiry date is filled in from the tier and start date. Change it only to give a custom end date. To record money, use "Renew / payment" instead.';
+    if (force || !expiryTouched || !$('eExpiry').value) $('eExpiry').value = expiryFor(tier, $('eStart').value || S.today, 1);
+  }
+  function openEdit(c) {
+    editing = c; expiryTouched = false;
+    $('edTitle').textContent = c ? 'Edit client' : 'Add client';
+    $('eName').value = c ? c.name : ''; $('eEmail').value = c ? c.email : ''; $('eExtra').value = c ? c.extra : ''; $('ePhone').value = c ? c.phone : '';
+    fillTiers($('eTier'), c ? c.tier : firstOffered(['Demo', 'Monthly', 'Quarterly', 'Yearly', 'Lifetime']), false, c ? c.tier : '');
+    $('eXr').value = c ? (c.extraResorts || 0) : 0;
+    $('eFreeResorts').checked = !!(c && c.freeResorts);
+    $('eXr').disabled = $('eFreeResorts').checked;
+    $('eXrHint').textContent = 'Every plan includes ' + (S.config.includedResorts || 2) + ' resorts. Each extra one adds ' + money(extraFee()) + ' per month to this client\'s subscription total.' +
+      (c && c.resortRequest ? ' This client is asking for ' + c.resortRequest + ' more.' : '') + (c && c.terms ? ' Terms accepted: ' + c.terms + '.' : '');
+    if ($('eFreeResorts').checked) $('eXrHint').textContent = 'Unlimited resorts at no extra charge. Previous approved counts are retained for use if this exemption is removed.';
+    $('eStart').value = c ? (c.start || S.today) : S.today;
+    $('eExpiry').value = c ? c.expiry : '';
+    $('eNotes').value = c ? c.notes : ''; $('eOver').checked = false;
+    $('eRefBy').value = c ? (c.refBy || '') : '';
+    $('eRefExcluded').checked = !!(c && c.referralExcluded);
+    $('eFinExcluded').checked = !!(c && c.financialExcluded);
+    $('eRefHint').textContent = c ? 'This client\'s own referral code: ' + c.refCode + (c.refTotal ? ' (' + c.refActive + ' of ' + c.refTotal + ' referred clients active, ' + (c.discountPct || 0) + '% off).' : '.') +
+      (c.refBy ? ' Referred by ' + (c.refByName || 'an unknown code') + '.' : '') : 'If someone referred this client, type their code. A code that starts with P belongs to a partner.';
+    $('btnDel').style.display = c ? '' : 'none';
+    $('edMsg').textContent = '';
+    if (c && c.expiry) { expiryTouched = true; syncExpiry(false); } else syncExpiry(true);
+    show('edBg', true); setTimeout(function () { $('eName').focus(); }, 50);
+  }
+  function saveClient() {
+    $('edMsg').textContent = '';
+    var o = { key: editing ? editing.key : '', name: $('eName').value, email: $('eEmail').value, extra: $('eExtra').value, phone: $('ePhone').value,
+              tier: $('eTier').value, start: $('eStart').value, expiry: $('eExpiry').value, notes: $('eNotes').value, override: $('eOver').checked, extraResorts: $('eXr').value, freeResorts:$('eFreeResorts').checked, refBy: $('eRefBy').value, referralExcluded: $('eRefExcluded').checked, financialExcluded: $('eFinExcluded').checked };
+    call('adminSaveClient', [o], function (v) {
+      show('edBg', false);
+      if (v.isNew) openKey(byKey(v.key), true); else toast('Saved.');
+    }, 'edMsg');
+  }
+
+  // ----- log a payment (renewal / advance payment) -----
+  function openPay(c, receipt) {
+    if (!S.clients.length) { toast('Add a client first.', true); return; }
+    payReceipt = receipt || null;
+    $('pyReceipt').style.display = payReceipt ? '' : 'none';
+    if (payReceipt) $('pyReceipt').innerHTML = 'From the receipt uploaded on <b>' + esc(payReceipt.at) + '</b>' + (payReceipt.amount ? ', claiming <b>' + esc(money(payReceipt.amount)) + '</b>' : '') +
+      (payReceipt.url ? ' - <a target="_blank" rel="noopener noreferrer" href="' + esc(payReceipt.url) + '">open the picture</a>' : '') + '. Saving marks the receipt as approved and emails the client.';
+    $('pyClient').innerHTML = S.clients.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).map(function (x) {
+      return '<option value="' + esc(x.key) + '"' + (c && x.key === c.key ? ' selected' : '') + '>' + esc(x.name) + ' (' + esc(x.email) + ')</option>';
+    }).join('');
+    $('pyType').innerHTML = (S.paymentTypes || []).map(function (t) { return '<option>' + esc(t) + '</option>'; }).join('');
+    $('pyPeriods').value = 1; $('pyDate').value = S.today; $('pyMethod').value = ''; $('pyRef').value = ''; $('pyNotes').value = '';
+    $('pyDiscountType').value = 'none'; $('pyDiscountValue').value = 0;
+    $('pyExtend').checked = true; $('pyOver').checked = false; $('pyMsg').textContent = ''; $('pyCur').textContent = S.config.currency || '';
+    amountTouched = false; typeTouched = false;
+    payClientChanged();
+    if (payReceipt) {
+      if (payReceipt.amount) { $('pyAmount').value = String(payReceipt.amount); amountTouched = true; }
+      if (payReceipt.reference) $('pyMethod').value = ''; $('pyRef').value = payReceipt.reference || ''; $('pyNotes').value = payReceipt.note ? 'Client note: ' + payReceipt.note : '';
+    }
+    show('pyBg', true);
+  }
+  function payClient() { return byKey($('pyClient').value); }
+  function payClientChanged() {
+    var c = payClient(); if (!c) return;
+    fillTiers($('pyTier'), c.tier === 'Demo' ? firstOffered(['Monthly', 'Quarterly', 'Yearly', 'Lifetime']) : c.tier, true, c.tier, c);
+    $('pyWho').textContent = 'Now: ' + c.tier + (c.lifetime ? ', never expires' : (c.daysLeft < 0 ? ', expired ' + nice(c.expiry) + ' (access revoked)' : ', ends ' + nice(c.expiry) + ' (' + leftText(c).toLowerCase() + ')'));
+    payPreview();
+  }
+  function payPreview() {
+    var c = payClient(); if (!c) return;
+    var tier = $('pyTier').value, one = tier === 'Lifetime' || tier === 'Demo';
+    if (one) $('pyPeriods').value = 1;
+    $('pyPeriods').disabled = one;
+    var n = Math.max(1, Math.floor(Number($('pyPeriods').value) || 1)), pr = totalOf(c, tier), xp = extraOf(c, tier), ext = $('pyExtend').checked;
+    $('pyOverBox').style.display = (tier === 'Demo' && ext) ? 'flex' : 'none';
+    var gross = Math.round(pr * n * 100) / 100, kind = $('pyDiscountType').value, value = Number($('pyDiscountValue').value) || 0;
+    $('pyDiscountValue').disabled = kind === 'none'; $('pyDiscountValue').max = kind === 'percent' ? '100' : String(gross);
+    var off = kind === 'percent' ? Math.round(gross * value) / 100 : kind === 'fixed' ? value : 0;
+    var valid = value >= 0 && (kind !== 'percent' || value <= 100) && off <= gross;
+    var net = Math.round((gross - off) * 100) / 100;
+    $('pyDiscountSummary').textContent = valid ? 'Total due: ' + money(gross) + ' − manual discount ' + money(off) + ' = ' + money(net) + '. Amount paid records the actual amount received.' : 'The discount cannot exceed the total due or 100%.';
+    if (!amountTouched && valid) $('pyAmount').value = String(net);
+    $('pyPriceHint').textContent = (pr ? 'Subscription total: ' + money(pr) + ' ' + PERIOD[tier] +
+        (xp ? ' (' + money(priceOf(tier)) + ' plan + ' + money(xp) + ' for ' + plural(c.extraResorts, 'extra resort') + ' at ' + money(extraFee()) + ' per month)' : '') +
+        (n > 1 ? ' x ' + n + ' = ' + money(pr * n) : '') + (discOf(c) ? ', after the ' + discOf(c) + '% referral discount' : '') + '. Change the amount if you gave a discount.'
+      : 'No price is set for ' + tier + ' yet (Pricing tab). Type the amount that was paid.') +
+      (tier === 'Lifetime' && !c.freeResorts && c.extraResorts && extraFee() ? ' Lifetime has no renewals: this client also owes ' + money(extraFee() * c.extraResorts) + ' per month for ' + plural(c.extraResorts, 'extra resort') + ' - log those payments as type Other with "Extend the subscription" unticked.' : '');
+    var early = c.status === 'active' && !c.lifetime && c.daysLeft > 0 && c.tier !== 'Demo';
+    if (!typeTouched) $('pyType').value = (early || n > 1) ? 'Advance payment' : (c.tier === 'Demo' ? 'New subscription' : 'Renewal');
+    var from = (!c.lifetime && c.expiry && ymdDays(c.expiry) >= ymdDays(S.today)) ? c.expiry : S.today, to = expiryFor(tier, from, n);
+    $('pyPreview').innerHTML = !ext ? 'The payment is logged only. The client\'s dates and access stay as they are.'
+      : (tier === 'Lifetime' ? '<b>Lifetime</b>: this client will never expire.'
+        : 'New period: <b>' + esc(nice(from)) + '</b> to <b>' + esc(nice(to)) + '</b>' + (n > 1 ? ' (' + n + ' periods paid in advance)' : '') +
+          (from !== S.today ? '<div class="hint">Starts when the current period ends, so no paid days are lost.</div>' : '')) +
+        (c.access ? '' : '<div class="hint">Access is ' + (c.status === 'expired' ? 'revoked' : 'off') + ' now and will be turned back on.</div>');
+  }
+  function savePay() {
+    var c = payClient(); if (!c) return;
+    $('pyMsg').textContent = '';
+    var o = { key: c.key, type: $('pyType').value, tier: $('pyTier').value, periods: $('pyPeriods').value, amount: $('pyAmount').value, date: $('pyDate').value,
+              method: $('pyMethod').value, reference: $('pyRef').value, notes: $('pyNotes').value, extend: $('pyExtend').checked, override: $('pyOver').checked,
+              receiptId: payReceipt ? payReceipt.id : '', discountType:$('pyDiscountType').value, discountValue:$('pyDiscountValue').value };
+    call('adminRecordPayment', [o], function (v) { show('pyBg', false); toast('Payment logged for ' + c.name + (o.extend ? ' and subscription extended.' : '.') + (payReceipt ? ' The receipt is approved and the client emailed.' : '') +
+      (v && v.earned ? ' Partner ' + v.earned.partner + ' earned ' + money(v.earned.amount) + ' (' + v.earned.pct + '%).' : '')); payReceipt = null; }, 'pyMsg');
+  }
+
+  function openKey(c, fresh) {
+    if (!c) return;
+    keyFor = c;
+    $('kyTitle').textContent = fresh ? 'Client added' : 'License key';
+    $('kyWho').textContent = c.name + '  |  ' + c.tier + (c.lifetime ? '' : '  |  ends ' + nice(c.expiry));
+    $('kyKey').textContent = c.key; $('kyEmail').textContent = c.email;
+    $('kyDirectLink').value = ''; $('btnCopyLoginLink').disabled = true;
+    $('kyLinkMsg').textContent = 'Keep this link private, like the license key. It does not grant Admin access or extend an expired plan.';
+    show('kyBg', true);
+    withClientLoginLink(c, function (url) {
+      if (!keyFor || keyFor.key !== c.key) return;
+      $('kyDirectLink').value = url; $('btnCopyLoginLink').disabled = false;
+    }, 'kyLinkMsg');
+  }
+  function withClientLoginLink(c, done, msgId) {
+    if (c.directLoginUrl && c.directLoginBase === S.config.appUrl) { done(c.directLoginUrl); return; }
+    call('adminGetClientLoginLink', [c.key], function (v) {
+      c.directLoginUrl = v.url; c.directLoginBase = S.config.appUrl;
+      done(v.url);
+    }, msgId);
+  }
+  function copyClientLoginLink(c) {
+    withClientLoginLink(c, function (url) { copy(url, 'Login link'); });
+  }
+  function clientMessage(c) {
+    var intro = 'Hello ' + c.name + ',\n\nYour ' + (S.config.productName || 'booking app') + ' is ready.\n\n';
+    if (c.directLoginUrl && c.directLoginBase === S.config.appUrl) return intro +
+      '1. Open your direct login link:  ' + c.directLoginUrl + '\n' +
+      '2. Enter your existing 6-digit Booking PIN. If Finish setting up appears first, choose and confirm a PIN there, then use it to sign in.\n\n' +
+      'This link selects your business on a new device without entering the license key. Keep it private; your Booking PIN is still required.\n\n' +
+      'Plan: ' + c.tier + (c.lifetime ? ' (never expires)' : ', valid until ' + nice(c.expiry)) + '.';
+    return intro +
+      '1. Open the booking app' + (S.config.appUrl ? ':  ' + S.config.appUrl : ' link we sent you.') + '\n' +
+      '2. When it asks for a license key, enter:  ' + c.key + '\n' +
+      '3. Enter your Booking PIN. If Finish setting up appears first, choose and confirm a PIN there, then use it to sign in.\n\n' +
+      'Plan: ' + c.tier + (c.lifetime ? ' (never expires)' : ', valid until ' + nice(c.expiry)) + '.';
+  }
+  function copy(text, what) {
+    function fallback() {
+      var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); toast(what + ' copied.'); } catch (e) { toast('Could not copy. Select the text and copy it by hand.', true); }
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { toast(what + ' copied.'); }, fallback);
+    else fallback();
+  }
+
+  /* ---------- settings ---------- */
+  var mailSenderAccounts = null;
+  function fillSenderAccounts(selected) {
+    var owner = mailSenderAccounts && mailSenderAccounts.owner, aliases = mailSenderAccounts ? mailSenderAccounts.aliases : [];
+    var html = '<option value="">Deploying Google account' + (owner ? ' (' + esc(owner) + ')' : ' (default)') + '</option>';
+    if (owner) html += '<option value="' + esc(owner) + '">' + esc(owner) + '</option>';
+    aliases.filter(function (address) { return address !== owner; }).forEach(function (address) { html += '<option value="' + esc(address) + '">' + esc(address) + '</option>'; });
+    if (selected && selected !== owner && aliases.indexOf(selected) < 0) html += '<option value="' + esc(selected) + '">' + esc(selected) + ' (saved; refresh to verify)</option>';
+    $('cSenderEmail').innerHTML = html; $('cSenderEmail').value = selected || '';
+  }
+  function refreshSenderAccounts() {
+    var selected = $('cSenderEmail').value;
+    $('senderMsg').textContent = '';
+    call('adminGetMailSenders', [], function (v) {
+      mailSenderAccounts = v; fillSenderAccounts(selected);
+      $('senderMsg').textContent = selected && selected !== v.owner && v.aliases.indexOf(selected) < 0 ? 'The saved sender is no longer available. Choose a verified account or the default sender.' : 'Sender list refreshed. Choose an account and save.';
+    }, 'senderMsg');
+  }
+  function fillConfig() {
+    var c = S.config || {}, pr = c.prices || {};
+    var activity = c.activity || {activeDays:2,rareDays:7,riskDays:14};
+    $('aActiveDays').value = activity.activeDays; $('aRareDays').value = activity.rareDays; $('aRiskDays').value = activity.riskDays;
+    $('cNote').value = c.renewalNote || ''; $('cUrl').value = c.renewalUrl || ''; $('cPhone').value = c.renewalPhone || '';
+    $('cEmail').value = c.renewalEmail || ''; $('cProduct').value = c.productName || '';
+    $('pCur').value = c.currency || '';
+    ['Demo', 'Monthly', 'Quarterly', 'Yearly', 'Lifetime'].forEach(function (t) { $('p' + t).value = pr[t] ? String(pr[t]) : '0'; });
+    $('cAlertEmail').value = c.alertEmail || ''; $('cAlertDays').value = (c.alertDays || []).join(', '); $('cClients').checked = !!c.emailClients;
+    var sender = c.sender || {}; fillSenderAccounts(sender.email); $('cSenderName').value = sender.name || ''; $('cSenderReply').value = sender.replyTo || '';
+    $('cSelf').checked = c.selfRegister !== false; $('cPendAl').checked = c.pendingAlerts !== false;
+    var rf = c.referral || {};
+    $('rfOn').checked = rf.on !== false; $('rfSignup').checked = rf.partnerSignup !== false;
+    $('rfPct').value = rf.clientPct === undefined ? 2 : rf.clientPct; $('rfMax').value = rf.clientMax === undefined ? 10 : rf.clientMax;
+    $('rfShare').value = rf.partnerPct === undefined ? 40 : rf.partnerPct;
+    $('rfPeriod').value = rf.partnerMonths === 'Lifetime' ? 'lifetime' : 'months'; $('rfMonths').value = rf.partnerMonths === 'Lifetime' ? 12 : (rf.partnerMonths || 12); syncEarningPeriod(); $('rfBanner').value = rf.banner || '';
+    ['Demo', 'Monthly', 'Quarterly', 'Yearly', 'Lifetime'].forEach(function (t) { $('o' + t).checked = offered(t); });
+    $('rInc').value = c.includedResorts || 2; $('rFee').value = String(c.extraFee === undefined ? 50 : c.extraFee);
+    $('cApp').value = c.appUrl || '';
+    $('cPayNote').value = c.payNote || ''; $('cHours').value = c.reviewHours || 48; qrPending = null; $('qrFile').value = '';
+    $('qrPrev').innerHTML = c.qr ? '<img src="' + c.qr + '" alt="Payment QR code">' : '<div class="none">No QR code yet. Clients see only your renewal contact details.</div>';
+    var T = S.terms || { text: '', updated: '' };
+    $('tReq').checked = c.termsRequired !== false; $('tText').value = T.text || ''; $('tUrl').value = c.termsUrl || '';
+    $('tUpd').textContent = T.updated ? 'Last updated: ' + nice(T.updated) + '.' : 'Not saved yet - this is the starting draft.';
+    termsWarn();
+    var view = c.termsUrl || (c.appUrl ? c.appUrl + '?page=terms' : '');
+    $('tView').style.display = view ? '' : 'none'; if (view) $('tView').href = view;
+    $('cServer').value = c.serverUrl || S.serverUrl || '';
+    $('tzHint').textContent = 'Dates and the midnight cut-off use the time zone of this Apps Script project: ' + (S.timeZone || '') + '. Change it in the script editor under Project Settings.';
+    var ft = $('fTier'), cur = ft.value;
+    ft.innerHTML = '<option value="">All tiers</option>' + S.tiers.map(function (t) { return '<option>' + esc(t) + '</option>'; }).join('');
+    ft.value = cur;
+  }
+  function saveConfig(msgId, okText, then) {
+    $(msgId).textContent = '';
+    var offer = {}; ['Demo', 'Monthly', 'Quarterly', 'Yearly', 'Lifetime'].forEach(function (t) { offer[t] = $('o' + t).checked; });
+    var prices = {}; ['Demo', 'Monthly', 'Quarterly', 'Yearly', 'Lifetime'].forEach(function (t) { prices[t] = $('p' + t).value; });
+    call('adminSaveConfig', [{
+      renewalNote: $('cNote').value, renewalUrl: $('cUrl').value, renewalPhone: $('cPhone').value, renewalEmail: $('cEmail').value,
+      productName: $('cProduct').value, alertEmail: $('cAlertEmail').value, alertDays: $('cAlertDays').value,
+      sender: { email: $('cSenderEmail').value, name: $('cSenderName').value, replyTo: $('cSenderReply').value },
+      emailClients: $('cClients').checked, serverUrl: $('cServer').value, currency: $('pCur').value, prices: prices, selfRegister: $('cSelf').checked,
+      offered: offer, includedResorts: $('rInc').value, extraFee: $('rFee').value, termsRequired: $('tReq').checked, termsUrl: $('tUrl').value, appUrl: $('cApp').value,
+      payNote: $('cPayNote').value, reviewHours: $('cHours').value, pendingAlerts: $('cPendAl').checked,
+      activity:{activeDays:$('aActiveDays').value,rareDays:$('aRareDays').value,riskDays:$('aRiskDays').value},
+      referral: { on: $('rfOn').checked, clientPct: $('rfPct').value, clientMax: $('rfMax').value, partnerPct: $('rfShare').value, partnerMonths: $('rfPeriod').value === 'lifetime' ? 'Lifetime' : $('rfMonths').value,
+                  partnerSignup: $('rfSignup').checked, banner: $('rfBanner').value }
+    }], function () { toast(okText); if (then) then(); }, msgId);
+  }
+  // the QR picture: resized in the browser to 420px, then kept in the admin's Drive
+  function readQr(file) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var img = new Image();
+      img.onload = function () {
+        var max = 420, sc = Math.min(1, max / Math.max(img.width, img.height)), cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
+        var g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+        qrPending = cv.toDataURL('image/png');
+        if (qrPending.length > 80000) qrPending = cv.toDataURL('image/jpeg', 0.85);
+        $('qrPrev').innerHTML = '<img src="' + qrPending + '" alt="New QR code (not saved yet)">';
+        $('qrMsg').textContent = '';
+      };
+      img.onerror = function () { $('qrMsg').textContent = 'That picture could not be read.'; };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+  function savePaySettings() {
+    $('qrMsg').textContent = '';
+    var q = qrPending;
+    saveConfig('qrMsg', 'Payment settings saved.', !q ? null : function () { call('adminSaveQr', [q], function () { toast('QR code saved. Clients see it within about 10 minutes.'); qrPending = null; }, 'qrMsg'); });
+  }
+  // the starting draft has [brackets] to fill in: remind the admin before clients read it
+  function termsWarn() {
+    var left = ($('tText').value.match(/\[[^\]\n]{1,80}\]/g) || []).length, w = $('tWarn');
+    var txt = $('tUrl').value.trim() ? '' : (!$('tText').value.trim() ? 'There is no text yet, so clients are not asked to accept anything.' :
+      left ? left + ' [bracketed] blank' + (left === 1 ? '' : 's') + ' still to fill in (your name, contact details, refund policy...). Clients see the text exactly as it is here.' : '');
+    w.textContent = txt; w.style.display = txt ? 'block' : 'none';
+  }
+  function saveTerms() {
+    $('termsMsg').textContent = '';
+    var text = $('tText').value, changed = text !== ((S.terms || {}).text || '');
+    saveConfig('termsMsg', 'Terms saved.', !changed ? null : function () { call('adminSaveTerms', [text], function () { toast('Terms saved. Last updated: today.'); }, 'termsMsg'); });
+  }
+  function openDash(c) {
+    call('adminOpenDashboard', [c.key], function (v) {
+      $('dbWho').textContent = v.name + ' - you will see and can change their bookings, reports and settings.';
+      $('dbLink').href = v.url; show('dbBg', true);
+    });
+  }
+
+  var TABS = ['clients', 'money', 'expenses', 'referrals', 'pricing', 'terms', 'alerts'];
+  function showTab(name) {
+    Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === name); });
+    TABS.forEach(function (t) { $('tab_' + t).style.display = (t === name) ? '' : 'none'; });
+  }
+
+  /* ---------- Admin PIN login ---------- */
+  var lgForced = false;
+  function setToken(t) { TOKEN = t || ''; try { if (TOKEN) sessionStorage.setItem('la_tok', TOKEN); else sessionStorage.removeItem('la_tok'); } catch (e) {} }
+  function lgMsg(m, good) { $('lgMsg').textContent = m || ''; $('lgMsg').style.color = good ? 'var(--ok)' : ''; }
+  function lgState(st, forced) {
+    lgForced = !!forced;
+    $('lg_pin').style.display = st === 'pin' ? '' : 'none'; $('lg_change').style.display = st === 'change' ? '' : 'none';
+    ['lgPin', 'lgOld', 'lgNew1', 'lgNew2'].forEach(function (id) { $(id).value = ''; });
+    $('lgOldBox').style.display = forced ? 'none' : ''; $('lgChCancel').style.display = forced ? 'none' : 'inline-block';
+    $('lgChTitle').textContent = forced ? 'Choose a new Admin PIN' : 'Change the Admin PIN';
+    $('lgChSub').textContent = forced ? 'The starting PIN 000000 must be changed before the panel opens.' : 'Enter your current PIN, then the new 6-digit PIN twice.';
+    setTimeout(function () { try { $(st === 'pin' ? 'lgPin' : (forced ? 'lgNew1' : 'lgOld')).focus(); } catch (e) {} }, 60);
+  }
+  function showLogin(msg) {
+    ['rvBg', 'poBg', 'rpBg', 'xpBg', 'rjBg', 'dbBg', 'dlBg', 'kyBg', 'pyBg', 'edBg'].forEach(function (id) { $(id).style.display = 'none'; });
+    $('app').style.display = 'none'; $('lgBg').style.display = 'flex';
+    lgState('pin'); lgMsg(msg || '');
+  }
+  function lgRun(done) {
+    busy(true);
+    return google.script.run
+      .withSuccessHandler(function (v) { busy(false); done(v || {}); })
+      .withFailureHandler(function (e) { busy(false); lgMsg((e && e.message) || String(e)); });
+  }
+  function doLogin() {
+    clearTimeout(loginTimer);
+    if ($('lgBg').style.display === 'none' || $('lg_pin').style.display === 'none' || $('busy').style.display === 'flex') return;
+    var pin = $('lgPin').value;
+    if (!/^\d{6}$/.test(pin)) { lgMsg('Enter your 6-digit Admin PIN.'); return; }
+    lgMsg('');
+    lgRun(function (v) {
+      if (!v.ok) { lgMsg(v.message); $('lgPin').value = ''; $('lgPin').focus(); return; }
+      setToken(v.token);
+      if (v.mustChange) lgState('change', true); else call('adminGetAll', [], null);
+    }).adminLogin(pin);
+  }
+  function doChangePin() {
+    var old = lgForced ? '000000' : $('lgOld').value, n1 = $('lgNew1').value, n2 = $('lgNew2').value;
+    if (!/^\d{6}$/.test(old)) { lgMsg('Enter your current 6-digit PIN.'); return; }
+    if (!/^\d{6}$/.test(n1)) { lgMsg('The new PIN must be exactly 6 digits.'); return; }
+    if (n1 !== n2) { lgMsg('The two new PINs do not match.'); return; }
+    lgMsg('');
+    lgRun(function (v) {
+      if (v.expired) { setToken(''); showLogin(v.message); return; }
+      if (!v.ok) { lgMsg(v.message); return; }
+      if (lgForced) call('adminGetAll', [], function () { toast('Admin PIN saved. Use it from now on.'); });
+      else { $('lgBg').style.display = 'none'; $('app').style.display = ''; toast('Admin PIN changed.'); }
+    }).adminChangePin(TOKEN, old, n1);
+  }
+  function lockPanel() {
+    var t = TOKEN; setToken('');
+    if (window.google && google.script) google.script.run.adminLogout(t);
+    showLogin('');
+  }
+
+  /* ---------- expenses ---------- */
+  var expEditing = null, expKind = 'One-time', expDelArmed = false;
+  function ivText(e) { return e.kind !== 'Subscription' ? '' : e.interval === 'Yearly' ? 'Every year' : e.interval === 'Custom' ? 'Every ' + plural(e.days, 'day') : 'Every month'; }
+  function renderExpenses() {
+    var st = S.expenseStats || { months: [], byCategory: {} }, ms = S.stats || {};
+    $('xMonth').textContent = money(st.month); $('xMonthS').textContent = 'Last month: ' + money(st.lastMonth);
+    $('xYear').textContent = money(st.year); $('xYearS').textContent = 'All time: ' + money(st.all);
+    $('xRun').textContent = money(st.runRate); $('xRunS').textContent = plural(st.subs || 0, 'running subscription');
+    var net = Math.round(((ms.month || 0) - (st.month || 0)) * 100) / 100;
+    $('xNet').textContent = (net < 0 ? '-' : '') + money(Math.abs(net)); $('xNetTile').className = 'tile ' + (net < 0 ? 't-bad' : 't-ok');
+    var max = 0; (st.months || []).forEach(function (m) { if (m.total > max) max = m.total; });
+    $('xChart').innerHTML = (st.months || []).map(function (m) {
+      var p = m.ym.split('-');
+      return '<div class="b"><span class="v">' + esc(money(m.total)) + '</span><i style="height:' + (max ? Math.round(m.total / max * 100) : 0) + '%;background:#d9822b"></i><span class="m">' + MON[+p[1] - 1] + ' ' + p[0].slice(2) + '</span></div>';
+    }).join('');
+    var cats = Object.keys(st.byCategory || {}).sort(function (a, b) { return st.byCategory[b] - st.byCategory[a]; });
+    $('xByCat').innerHTML = cats.length ? cats.map(function (k) { return '<div><span>' + esc(k) + '</span><b>' + esc(money(st.byCategory[k])) + '</b></div>'; }).join('') : '<div><span class="hint">Nothing spent yet this year.</span></div>';
+    var q = $('xq').value.trim().toLowerCase(), fk = $('xKind').value, all = S.expenses || [];
+    var rows = all.filter(function (e) {
+      if (q && (e.label + ' ' + e.category + ' ' + e.notes).toLowerCase().indexOf(q) < 0) return false;
+      if (fk === 'active') return !!e.active;
+      return !fk || e.kind === fk;
+    });
+    if (!all.length) { $('xlist').innerHTML = '<div class="empty">No expenses yet. Choose <b>+ Add expense</b> to record a one-time cost or a subscription you pay for.</div>'; return; }
+    if (!rows.length) { $('xlist').innerHTML = '<div class="empty">No expenses match this search.</div>'; return; }
+    var h = '<table><thead><tr><th>Expense</th><th>Kind</th><th class="num">Amount</th><th>Paid / started</th><th>Next charge</th><th class="num">Spent so far</th><th></th></tr></thead><tbody>';
+    rows.forEach(function (e) {
+      var sub = e.kind === 'Subscription';
+      h += '<tr><td><div class="nm">' + esc(e.label) + '</div><div class="em">' + esc([e.category, e.notes].filter(Boolean).join(' - ')) + '</div></td>' +
+        '<td data-l="Kind"><span class="badge ' + (sub ? 'b-sub' : 'b-one') + '">' + (sub ? 'Subscription' : 'One-time') + '</span>' + (sub ? '<div class="em">' + esc(ivText(e)) + '</div>' : '') + '</td>' +
+        '<td class="num" data-l="Amount"><b>' + esc(money(e.amount)) + '</b></td>' +
+        '<td data-l="' + (sub ? 'Started' : 'Paid') + '">' + esc(nice(e.start)) + '</td>' +
+        '<td data-l="Next charge">' + (!sub ? '<span class="em">-</span>' : e.next ? esc(nice(e.next)) : '<span class="badge b-off">Ended' + (e.end ? ' ' + esc(nice(e.end)) : '') + '</span>') + '</td>' +
+        '<td class="num" data-l="Spent so far">' + esc(money(e.spent)) + (sub ? '<div class="em">' + plural(e.times || 0, 'charge') + '</div>' : '') + '</td>' +
+        '<td><div class="acts"><button class="btn sm" data-xedit="' + esc(e.id) + '" type="button">Edit</button></div></td></tr>';
+    });
+    $('xlist').innerHTML = h + '</tbody></table>';
+  }
+  function setExpKind(k) {
+    expKind = k === 'Subscription' ? 'Subscription' : 'One-time';
+    Array.prototype.forEach.call(document.querySelectorAll('#xKindSeg button'), function (b) { b.classList.toggle('on', b.getAttribute('data-kind') === expKind); });
+    $('xSubBox').style.display = expKind === 'Subscription' ? '' : 'none';
+    $('xStartLbl').textContent = expKind === 'Subscription' ? 'First charge date' : 'Date paid';
+    expHint();
+  }
+  function expHint() {
+    var iv = $('xInterval').value;
+    $('xDaysBox').style.display = iv === 'Custom' ? '' : 'none';
+    $('xHint').textContent = expKind !== 'Subscription' ? 'Counted once, in the month of this date.'
+      : 'Counted again ' + (iv === 'Yearly' ? 'every year' : iv === 'Custom' ? 'every ' + (Math.floor(Number($('xDays').value)) || 'N') + ' days' : 'every month') +
+        ' from the first charge date' + ($('xEnd').value ? ' until ' + nice($('xEnd').value) + '.' : ' until you give it an end date.');
+  }
+  function openExp(e) {
+    expEditing = e; expDelArmed = false;
+    $('xpTitle').textContent = e ? 'Edit expense' : 'Add expense';
+    $('xLabel').value = e ? e.label : ''; $('xCat').value = e ? e.category : ''; $('xAmount').value = e ? String(e.amount) : '';
+    $('xInterval').value = e && e.interval ? e.interval : 'Monthly'; $('xDays').value = e && e.days ? e.days : '';
+    $('xStart').value = e ? (e.start || S.today) : S.today; $('xEnd').value = e ? (e.end || '') : ''; $('xNotes').value = e ? e.notes : '';
+    $('xCur').textContent = S.config.currency || ''; $('xpMsg').textContent = '';
+    $('btnExpDel').style.display = e ? '' : 'none'; $('btnExpDel').textContent = 'Delete';
+    setExpKind(e ? e.kind : 'One-time');
+    show('xpBg', true); setTimeout(function () { $('xLabel').focus(); }, 50);
+  }
+  function saveExp() {
+    $('xpMsg').textContent = '';
+    call('adminSaveExpense', [{ id: expEditing ? expEditing.id : '', label: $('xLabel').value, category: $('xCat').value, kind: expKind, interval: $('xInterval').value,
+      days: $('xDays').value, amount: $('xAmount').value, start: $('xStart').value, end: $('xEnd').value, notes: $('xNotes').value }],
+      function () { show('xpBg', false); toast('Expense saved.'); }, 'xpMsg');
+  }
+  function delExp() {
+    if (!expEditing) return;
+    if (!expDelArmed) { expDelArmed = true; $('btnExpDel').textContent = 'Click again to delete'; return; }
+    call('adminDeleteExpense', [expEditing.id], function () { show('xpBg', false); toast('Expense deleted.'); }, 'xpMsg');
+  }
+
+  /* ---------- referrals: partners, payouts, clients who referred ---------- */
+  var refEditing = null, payoutFor = null;
+  function partnerById(id) { var l = (S.referral || {}).partners || []; for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i]; return null; }
+  function renderRef() {
+    var R = S.referral || { partners: [], earnings: [], payouts: [], totals: {} }, t = R.totals || {};
+    var owedTo = (R.partners || []).filter(function (p) { return p.balance > 0; }).length;
+    $('rOwed').textContent = money(t.balance); $('rOwedS').textContent = owedTo ? plural(owedTo, 'partner') + ' to pay' : 'Nothing to pay right now';
+    $('rPaid').textContent = money(t.paid); $('rPaidS').textContent = plural((R.payouts || []).filter(function (o) { return !o.isVoid; }).length, 'payout') + ' logged';
+    $('rEarned').textContent = money(t.earned);
+    var disc = S.clients.filter(function (c) { return c.discountPct > 0; });
+    $('rDisc').textContent = money(t.discountMonthly); $('rDiscS').textContent = plural(disc.length, 'client') + ' with a discount';
+    var link = R.link || '';
+    $('rfLink').textContent = link || 'Paste your License Server URL under Alerts & setup first.';
+    $('rfOpen').style.display = link ? '' : 'none'; if (link) $('rfOpen').href = link;
+
+    var q = $('rq').value.trim().toLowerCase();
+    var rows = (R.partners || []).filter(function (p) { return !q || (p.name + ' ' + p.email + ' ' + p.code + ' ' + p.phone).toLowerCase().indexOf(q) >= 0; });
+    rows.sort(function (a, b) { return (b.balance - a.balance) || a.name.localeCompare(b.name); });
+    if (!(R.partners || []).length) $('rplist').innerHTML = '<div class="empty">No partners yet. Share the partner page link above, or choose <b>+ Add partner</b>.</div>';
+    else if (!rows.length) $('rplist').innerHTML = '<div class="empty">No partners match this search.</div>';
+    else {
+      var h = '<table><thead><tr><th>Partner</th><th>Code</th><th>Referred clients</th><th class="num">Earned</th><th class="num">Paid</th><th class="num">Balance</th><th>Payout details</th><th></th></tr></thead><tbody>';
+      rows.forEach(function (p) {
+        var id = esc(p.id);
+        h += '<tr><td><div class="nm">' + esc(p.name) + (p.status === 'Blocked' ? '<span class="badge b-bad" style="margin-left:6px;font-size:11px">Blocked</span>' : '') + (!p.hasPin ? '<span class="badge b-off" style="margin-left:6px;font-size:11px">No PIN yet</span>' : '') + '</div>' +
+          '<div class="em">' + esc(p.email) + (p.phone ? ' &middot; ' + esc(p.phone) : '') + '</div></td>' +
+          '<td data-l="Code"><span class="badge b-code" data-copy="' + esc(p.code) + '" title="Click to copy">' + esc(p.code) + '</span></td>' +
+          '<td data-l="Referred clients">' + p.activeCount + ' active<div class="em">' + p.totalCount + ' in total · ' + (p.commissionPct === undefined ? ((S.config.referral || {}).partnerPct || 0) : p.commissionPct) + '% · ' + (p.earningPeriod === 'Lifetime' ? 'Lifetime' : (p.earningPeriod || (S.config.referral || {}).partnerMonths || 12) + ' months') + '</div></td>' +
+          '<td class="num" data-l="Earned">' + esc(money(p.earned)) + '</td><td class="num" data-l="Paid">' + esc(money(p.paid)) + '</td>' +
+          '<td class="num" data-l="Balance"><b style="color:' + (p.balance > 0 ? 'var(--warn)' : 'inherit') + '">' + esc(money(p.balance)) + '</b></td>' +
+          '<td data-l="Payout details"><span class="em">' + (p.method ? esc(p.method) + '<br>' + esc(p.accName) + '<br>' + esc(p.accNo) : 'Not given yet') + '</span></td>' +
+          '<td><div class="acts"><button class="btn sm pri" data-rpay="' + id + '" type="button">Log payout</button><button class="btn sm" data-rsee="' + id + '" type="button">Clients</button>' +
+          (p.hasQr ? '<button class="btn sm" data-rqr="' + id + '" type="button">QR code</button>' : '') + '<button class="btn sm" data-redit="' + id + '" type="button">Edit</button></div></td></tr>';
+      });
+      $('rplist').innerHTML = h + '</tbody></table>';
+    }
+
+    var cr = S.clients.filter(function (c) { return c.refTotal > 0; }).sort(function (a, b) { return (b.refActive - a.refActive) || a.name.localeCompare(b.name); });
+    if (!cr.length) $('rclients').innerHTML = '<div class="hint">No client has referred another client yet. Every client finds their code on the main menu of the booking app.</div>';
+    else {
+      var ch = '<table><thead><tr><th>Client</th><th>Code</th><th>Referred clients</th><th>Discount</th><th class="num">Saves each period</th></tr></thead><tbody>';
+      cr.forEach(function (c) {
+        var full = Math.round((priceOf(c.tier) + extraOf(c, c.tier)) * 100) / 100, save = Math.round((full - totalOf(c, c.tier)) * 100) / 100;
+        ch += '<tr><td><div class="nm">' + esc(c.name) + '</div><div class="em">' + esc(c.email) + '</div></td><td data-l="Code"><span class="badge b-code" data-copy="' + esc(c.refCode) + '">' + esc(c.refCode) + '</span></td>' +
+          '<td data-l="Referred clients">' + c.refActive + ' active<div class="em">' + c.refTotal + ' in total</div></td>' +
+          '<td data-l="Discount">' + (c.referralExcluded ? '<span class="badge b-off">Excluded</span>' : '<b>' + (c.discountPct || 0) + '%</b>') + '</td><td class="num" data-l="Saves">' + (save ? esc(money(save)) + ' ' + PERIOD[c.tier] : '-') + '</td></tr>';
+      });
+      $('rclients').innerHTML = ch + '</tbody></table>';
+    }
+
+    var E = R.earnings || [], O = R.payouts || [];
+    $('relist').innerHTML = !E.length ? '<div class="hint">Nothing yet. A share is added here every time you log a payment for a client a partner referred.</div>' :
+      '<table><thead><tr><th>Date</th><th>Partner / client</th><th class="num">Payment</th><th class="num">Earned</th></tr></thead><tbody>' + E.map(function (e) {
+        return '<tr' + (e.isVoid ? ' class="void"' : '') + '><td data-l="Date">' + esc(nice(e.date)) + '</td><td><div class="nm">' + esc(e.partner) + '</div><div class="em">' + esc(e.client) + '</div></td>' +
+          '<td class="num" data-l="Payment">' + esc(money(e.payAmount)) + '<div class="em">' + e.pct + '%</div></td><td class="num" data-l="Earned"><b>' + esc(money(e.amount)) + '</b></td></tr>';
+      }).join('') + '</tbody></table>';
+    $('rolist').innerHTML = !O.length ? '<div class="hint">No payouts logged yet.</div>' :
+      '<table><thead><tr><th>Date</th><th>Partner</th><th class="num">Amount</th><th></th></tr></thead><tbody>' + O.map(function (o) {
+        return '<tr' + (o.isVoid ? ' class="void"' : '') + '><td data-l="Date">' + esc(nice(o.date)) + '</td><td><div class="nm">' + esc(o.partner) + '</div><div class="em">' + esc([o.method, o.reference, o.notes].filter(Boolean).join(' / ') || '-') + '</div></td>' +
+          '<td class="num" data-l="Amount"><b>' + esc(money(o.amount)) + '</b></td><td><div class="acts"><button class="btn sm" data-ovoid="' + esc(o.id) + '" data-on="' + (o.isVoid ? '0' : '1') + '" type="button">' + (o.isVoid ? 'Restore' : 'Void') + '</button></div></td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+  function openPartner(p) {
+    refEditing = p;
+    $('rpTitle').textContent = p ? 'Edit partner' : 'Add partner';
+    $('rpName').value = p ? p.name : ''; $('rpEmail').value = p ? p.email : ''; $('rpPhone').value = p ? p.phone : '';
+    $('rpStatus').value = p ? p.status : 'Active'; $('rpNotes').value = p ? (p.notes || '') : ''; $('rpMsg').textContent = '';
+    $('rpShare').value = p && p.sharePct !== null && p.sharePct !== undefined ? p.sharePct : '';
+    $('rpPeriod').value = p && p.earningMonths ? p.earningMonths === 'Lifetime' ? 'lifetime' : 'months' : 'default'; $('rpMonths').value = p && typeof p.earningMonths === 'number' ? p.earningMonths : 12; syncPartnerPeriod();
+    $('rpHint').textContent = p ? 'Code ' + p.code + '. Joined ' + (p.created || '').slice(0, 10) + (p.login ? ', last signed in ' + p.login : ', has not signed in yet') + '.'
+      : 'The partner is emailed their referral code and the partner page link, where they choose "Set or reset my PIN" to create their PIN.';
+    show('rpBg', true); setTimeout(function () { $('rpName').focus(); }, 50);
+  }
+  function savePartner() {
+    $('rpMsg').textContent = '';
+    call('adminSaveReferrer', [{ id: refEditing ? refEditing.id : '', name: $('rpName').value, email: $('rpEmail').value, phone: $('rpPhone').value, status: $('rpStatus').value, notes: $('rpNotes').value, sharePct:$('rpShare').value, earningMonths:$('rpPeriod').value === 'default' ? '' : $('rpPeriod').value === 'lifetime' ? 'Lifetime' : $('rpMonths').value }],
+      function () { show('rpBg', false); toast(refEditing ? 'Partner saved.' : 'Partner added and emailed their code.'); }, 'rpMsg');
+  }
+  function qrBtn(p) { return p.hasQr ? '<div style="margin-top:8px"><button class="btn sm" id="btnPoQr" type="button">Show their QR code</button></div>' : ''; }
+  function openPayout(p) {
+    payoutFor = p;
+    $('poWho').textContent = p.name + ' (' + p.email + ') is owed ' + money(p.balance) + '. Earned ' + money(p.earned) + ', paid so far ' + money(p.paid) + '.';
+    $('poDetails').innerHTML = (p.method ? '<b>' + esc(p.method) + '</b><br>' + esc(p.accName) + '<br><span class="k" style="font-size:15px">' + esc(p.accNo) + '</span>' + (p.pnotes ? '<div class="hint">' + esc(p.pnotes) + '</div>' : '')
+      : 'This partner has not given payout details yet. Ask them to fill them in on the partner page.') + qrBtn(p);
+    $('poAmount').value = p.balance > 0 ? String(p.balance) : ''; $('poDate').value = S.today; $('poMethod').value = p.method || ''; $('poRef').value = ''; $('poNotes').value = '';
+    $('poForce').checked = false; $('poForceBox').style.display = 'none'; $('poMsg').textContent = ''; $('poCur').textContent = S.config.currency || '';
+    show('poBg', true);
+  }
+  function savePayout() {
+    if (!payoutFor) return;
+    $('poMsg').textContent = '';
+    var p = payoutFor;
+    call('adminLogPayout', [{ referrerId: p.id, amount: $('poAmount').value, date: $('poDate').value, method: $('poMethod').value, reference: $('poRef').value, notes: $('poNotes').value, force: $('poForce').checked }],
+      function () { show('poBg', false); toast('Payout to ' + p.name + ' logged. They were emailed.'); payoutFor = null; }, 'poMsg',
+      function (v) { if (v.needForce) $('poForceBox').style.display = 'flex'; });
+  }
+  function showReferees(p) {
+    $('rvTitle').textContent = 'Clients referred by ' + p.name;
+    var months = p.earningPeriod || (S.config.referral || {}).partnerMonths || 12;
+    $('rvBody').innerHTML = !p.referees.length ? '<div class="hint">Nobody has registered with code ' + esc(p.code) + ' yet.</div>' :
+      '<table><thead><tr><th>Client</th><th>Plan</th><th>Status</th><th>First payment</th><th>Earns until</th><th class="num">Earned</th></tr></thead><tbody>' + p.referees.map(function (r) {
+        return '<tr><td><div class="nm">' + esc(r.name) + '</div><div class="em">Joined ' + esc(nice(r.joined)) + '</div></td><td data-l="Plan">' + esc(r.tier) + '</td>' +
+          '<td data-l="Status"><span class="badge ' + (r.state === 'Active' ? 'b-ok' : r.state === 'On demo' ? 'b-warn' : 'b-off') + '">' + esc(r.state) + '</span></td>' +
+          '<td data-l="First payment">' + (r.firstPaid ? esc(nice(r.firstPaid)) : '<span class="em">Not yet</span>') + '</td><td data-l="Earns until">' + (r.lifetime || months === 'Lifetime' ? 'Lifetime' : r.until ? esc(nice(r.until)) : '<span class="em">' + months + ' months from the first payment</span>') + '</td>' +
+          '<td class="num" data-l="Earned"><b>' + esc(money(r.earned)) + '</b></td></tr>';
+      }).join('') + '</tbody></table>';
+    show('rvBg', true);
+  }
+  function showPartnerQr(p) {
+    call('adminReferrerQr', [p.id], function (v) {
+      $('rvTitle').textContent = 'Payout QR code of ' + v.name;
+      $('rvBody').innerHTML = v.qr ? '<div style="text-align:center"><img src="' + v.qr + '" alt="Payout QR code" style="max-width:100%;width:320px;border:1px solid var(--line);border-radius:12px"></div>' : '<div class="hint">The QR code picture could not be read from your Drive.</div>';
+      show('rvBg', true);
+    });
+  }
+
+  /* ---------- events ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (b) {
+    b.addEventListener('click', function () {
+      showTab(b.getAttribute('data-tab'));
+    });
+  });
+  $('q').addEventListener('input', render); $('fStatus').addEventListener('change', render); $('fTier').addEventListener('change', render);
+  $('fUsage').addEventListener('change', render);
+  $('eFreeResorts').addEventListener('change', function(){ $('eXr').disabled=this.checked; $('eXrHint').textContent=this.checked?'Unlimited resorts at no extra charge. Previous approved counts are retained.':'Additional resorts use the approved count above and the configured monthly fee.'; });
+  $('pq').addEventListener('input', renderMoney);
+  $('btnAdd').addEventListener('click', function () { openEdit(null); });
+  $('btnPayNew').addEventListener('click', function () { openPay(null); });
+  $('list').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
+    var k = b.getAttribute('data-pay') || b.getAttribute('data-key') || b.getAttribute('data-edit') || b.getAttribute('data-dash') || b.getAttribute('data-loginlink') || b.getAttribute('data-k') || b.getAttribute('data-uncancel'), c = byKey(k);
+    if (!c) return;
+    if (b.hasAttribute('data-uncancel')) { call('adminSetCancelled', [c.key, false], function () { toast(c.name + ': cancellation undone. They get renewal notices again.'); }); return; }
+    if (b.hasAttribute('data-rq')) {
+      var yes = b.getAttribute('data-rq') === '1', n = c.resortRequest;
+      call('adminResortRequest', [c.key, yes], function () { toast(c.name + ': ' + (yes ? plural(n, 'extra resort') + ' approved. Their subscription total went up by ' + money(extraFee() * n) + ' per month.' : 'request declined.') + ' The client is emailed.'); });
+    }
+    else if (b.hasAttribute('data-pay')) openPay(c); else if (b.hasAttribute('data-key')) openKey(c, false);
+    else if (b.hasAttribute('data-dash')) openDash(c); else if (b.hasAttribute('data-loginlink')) copyClientLoginLink(c); else openEdit(c);
+  });
+  $('list').addEventListener('change', function (e) {
+    var k = e.target.getAttribute && e.target.getAttribute('data-acc'); if (!k) return;
+    var on = e.target.checked, c = byKey(k);
+    call('adminSetAccess', [k, on], function () { toast((c ? c.name + ': ' : '') + 'access turned ' + (on ? 'on' : 'off') + '. The app follows within about 10 minutes.'); });
+    setTimeout(render, 0);      // if the call fails the switch goes back to what is saved
+  });
+  $('rclist').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
+    var id = b.getAttribute('data-rclog') || b.getAttribute('data-rcrej'), r = (S.receipts || []).filter(function (x) { return x.id === id; })[0];
+    if (!r) return;
+    if (b.hasAttribute('data-rclog')) { var c = byKey(r.key); if (!c) { toast('That client is no longer in the list.', true); return; } openPay(c, r); }
+    else { rejecting = r; $('rjWho').textContent = r.name + ' - receipt uploaded ' + r.at + (r.amount ? ', claiming ' + money(r.amount) : '') + '. The client is emailed that it was not accepted.'; $('rjReason').value = ''; $('rjMsg').textContent = ''; show('rjBg', true); }
+  });
+  $('btnDoReject').addEventListener('click', function () {
+    if (!rejecting) return;
+    call('adminRejectReceipt', [rejecting.id, $('rjReason').value], function () { show('rjBg', false); toast('Receipt rejected and the client emailed.'); rejecting = null; }, 'rjMsg');
+  });
+  $('qrFile').addEventListener('change', function () { if (this.files && this.files[0]) readQr(this.files[0]); });
+  $('btnSavePay').addEventListener('click', savePaySettings);
+  $('btnQrRemove').addEventListener('click', function () { qrPending = null; $('qrFile').value = ''; call('adminSaveQr', [''], function () { toast('QR code removed.'); }, 'qrMsg'); });
+  $('plist').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button[data-void]') : null; if (!b) return;
+    var on = b.getAttribute('data-on') === '1';
+    call('adminVoidPayment', [b.getAttribute('data-void'), on], function () { toast(on ? 'Payment voided. It no longer counts in the totals; the client\'s dates were not changed.' : 'Payment restored.'); });
+  });
+  $('eTier').addEventListener('change', function () { syncExpiry(true); });
+  $('eStart').addEventListener('change', function () { syncExpiry(true); });
+  $('eExpiry').addEventListener('input', function () { expiryTouched = true; });
+  $('btnSaveClient').addEventListener('click', saveClient);
+  $('btnDel').addEventListener('click', function () {
+    if (!editing) return;
+    $('dlWho').textContent = editing.name + ' (' + editing.email + ') will be removed and its license key will stop working. Its logged payments stay in the totals, and the email still counts as having used its Demo. The client\'s own bookings and sheet are not touched.';
+    show('dlBg', true);
+  });
+  $('btnDoDel').addEventListener('click', function () {
+    if (!editing) return;
+    call('adminDeleteClient', [editing.key], function () { show('dlBg', false); show('edBg', false); toast('Client deleted.'); });
+  });
+  $('pyClient').addEventListener('change', function () { amountTouched = false; typeTouched = false; payReceipt = null; $('pyReceipt').style.display = 'none'; payClientChanged(); });
+  $('pyTier').addEventListener('change', payPreview); $('pyPeriods').addEventListener('input', payPreview); $('pyExtend').addEventListener('change', payPreview);
+  $('pyAmount').addEventListener('input', function () { amountTouched = true; });
+  $('pyType').addEventListener('change', function () { typeTouched = true; });
+  $('btnDoPay').addEventListener('click', savePay);
+  $('btnCopyKey').addEventListener('click', function () { if (keyFor) copy(keyFor.key, 'Key'); });
+  $('btnCopyLoginLink').addEventListener('click', function () { if (keyFor && $('kyDirectLink').value) copy($('kyDirectLink').value, 'Login link'); });
+  $('btnCopyMsg').addEventListener('click', function () { if (keyFor) copy(clientMessage(keyFor), 'Message'); });
+  $('btnSavePricing').addEventListener('click', function () { saveConfig('priceMsg', 'Prices and renewal info saved.'); });
+  $('btnSaveAlerts').addEventListener('click', function () { saveConfig('alertMsg', 'Settings saved.'); });
+  $('btnRefreshSenders').addEventListener('click', refreshSenderAccounts);
+  $('btnSaveSender').addEventListener('click', function () { saveConfig('senderMsg', 'Email sender saved.'); });
+  $('btnSaveServer').addEventListener('click', function () { saveConfig('serverMsg', 'URL saved.'); });
+  $('btnSaveApp').addEventListener('click', function () { saveConfig('appMsg', 'Booking App URL saved.'); });
+  $('btnSaveTerms').addEventListener('click', saveTerms);
+  $('tText').addEventListener('input', termsWarn); $('tUrl').addEventListener('input', termsWarn);
+  $('dbLink').addEventListener('click', function () { setTimeout(function () { show('dbBg', false); }, 300); });
+  $('btnCopyServer').addEventListener('click', function () { if ($('cServer').value) copy($('cServer').value, 'URL'); else toast('Paste the web app URL first.', true); });
+  $('btnRunAlerts').addEventListener('click', function () { $('alertMsg').textContent = ''; call('adminRunAlerts', [], function (v) { toast(v.message); }, 'alertMsg'); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-close]'), function (b) {
+    b.addEventListener('click', function () { var bg = b.closest('.bg'); if (bg) bg.style.display = 'none'; });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    ['rvBg', 'poBg', 'rpBg', 'xpBg', 'rjBg', 'dbBg', 'dlBg', 'kyBg', 'pyBg', 'edBg'].some(function (id) { if ($(id).style.display === 'flex') { $(id).style.display = 'none'; return true; } return false; });
+  });
+
+  /* ---------- events of the new parts ---------- */
+  $('btnLogin').addEventListener('click', doLogin);
+  var loginTimer;
+  $('lgPin').addEventListener('input', function (e) {
+    this.value = this.value.replace(/\D/g, '').slice(0, 6); clearTimeout(loginTimer);
+    var value = this.value;
+    if (!e.isComposing && value.length === 6) loginTimer = setTimeout(function () { if ($('lgPin').value === value) doLogin(); }, 140);
+  });
+  $('lgPin').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } });
+  ['lgOld', 'lgNew1', 'lgNew2'].forEach(function (id) { $(id).addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 6); }); });
+  $('lgNew2').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doChangePin(); } });
+  $('btnChPin').addEventListener('click', doChangePin);
+  $('lgChCancel').addEventListener('click', function () { $('lgBg').style.display = 'none'; $('app').style.display = ''; });
+  $('btnChangePin').addEventListener('click', function () { $('app').style.display = 'none'; $('lgBg').style.display = 'flex'; lgState('change', false); lgMsg(''); });
+  $('btnLock').addEventListener('click', lockPanel);
+  $('btnRefreshAll').addEventListener('click', function () { call('adminRefreshAll', [], function (v) { toast(v.message || 'Refreshed.'); }); });
+  $('pendChip').addEventListener('click', function () { showTab('money'); try { $('rcCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} });
+  document.addEventListener('click', function (e) {      // any referral code badge: click to copy
+    var el = e.target.closest ? e.target.closest('[data-copy]') : null;
+    if (el) copy(el.getAttribute('data-copy'), 'Referral code');
+  });
+  $('xq').addEventListener('input', renderExpenses); $('xKind').addEventListener('change', renderExpenses);
+  $('btnExpNew').addEventListener('click', function () { openExp(null); });
+  $('xlist').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button[data-xedit]') : null; if (!b) return;
+    var x = (S.expenses || []).filter(function (v) { return v.id === b.getAttribute('data-xedit'); })[0];
+    if (x) openExp(x);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#xKindSeg button'), function (b) { b.addEventListener('click', function () { setExpKind(b.getAttribute('data-kind')); }); });
+  $('xInterval').addEventListener('change', expHint); $('xDays').addEventListener('input', expHint); $('xEnd').addEventListener('change', expHint);
+  $('btnExpSave').addEventListener('click', saveExp); $('btnExpDel').addEventListener('click', delExp);
+  $('rq').addEventListener('input', renderRef);
+  $('btnRefNew').addEventListener('click', function () { openPartner(null); });
+  $('btnRpSave').addEventListener('click', savePartner);
+  $('btnPoSave').addEventListener('click', savePayout);
+  $('btnSaveRef').addEventListener('click', function () { saveConfig('rfMsg', 'Referral settings saved.'); });
+  function syncEarningPeriod() {
+    var lifetime = $('rfPeriod').value === 'lifetime';
+    $('rfMonths').disabled = lifetime; $('rfMonths').hidden = lifetime; $('rfMonthsLabel').hidden = lifetime;
+  }
+  $('rfPeriod').addEventListener('change', syncEarningPeriod);
+  function syncPartnerPeriod() { var fixed = $('rpPeriod').value === 'months'; $('rpMonths').hidden = !fixed; $('rpMonthsLabel').hidden = !fixed; }
+  $('rpPeriod').addEventListener('change', syncPartnerPeriod);
+  $('btnSaveActivity').addEventListener('click', function(){saveConfig('activityMsg','Activity thresholds saved.');});
+  $('pyDiscountType').addEventListener('change', payPreview); $('pyDiscountValue').addEventListener('input', payPreview);
+  $('btnCopyRefLink').addEventListener('click', function () { var l = (S.referral || {}).link; if (l) copy(l, 'Partner page link'); else toast('Paste your License Server URL under Alerts & setup first.', true); });
+  $('rplist').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
+    var p = partnerById(b.getAttribute('data-rpay') || b.getAttribute('data-rsee') || b.getAttribute('data-rqr') || b.getAttribute('data-redit'));
+    if (!p) return;
+    if (b.hasAttribute('data-rpay')) openPayout(p); else if (b.hasAttribute('data-rsee')) showReferees(p);
+    else if (b.hasAttribute('data-rqr')) showPartnerQr(p); else openPartner(p);
+  });
+  $('poDetails').addEventListener('click', function (e) { if (e.target && e.target.id === 'btnPoQr' && payoutFor) showPartnerQr(payoutFor); });
+  $('rolist').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button[data-ovoid]') : null; if (!b) return;
+    var on = b.getAttribute('data-on') === '1';
+    call('adminVoidPayout', [b.getAttribute('data-ovoid'), on], function () { toast(on ? 'Payout voided. The amount is owed to the partner again.' : 'Payout restored.'); });
+  });
+
+  if (window.google && google.script) { if (TOKEN) call('adminGetAll', [], null); else showLogin(''); }
+  else load({ clients: [], payments: [], receipts: [], stats: { months: [], byTier: {}, byType: {} }, config: { alertDays: [7, 3, 1], prices: {}, offered: {}, currency: '' }, terms: { text: '', updated: '' },
+              tiers: ['Demo', 'Monthly', 'Quarterly', 'Yearly', 'Lifetime'], paymentTypes: ['Renewal', 'Advance payment', 'New subscription', 'Other'],
+              today: new Date().toISOString().slice(0, 10), serverUrl: '', me: '', expenses: [], expenseStats: { months: [], byCategory: {} },
+              referral: { partners: [], earnings: [], payouts: [], totals: {}, link: '' } });
+</script>
+</body>
+</html>

@@ -7,4 +7,4 @@
  *    Must be the same value as ADMIN_GOOGLE_CLIENT_ID in the License Admin Code.gs.
  */
 window.RD_API_URL = 'https://script.google.com/macros/s/AKfycbzMVkyYZnAd2DeUtoT3Wnif7ZBBSC-YmOFYUCo6mBkYhWOfzGKEvWGkiOh2vMTiJfF9Gw/exec';
-window.RD_ADMIN_GOOGLE_CLIENT_ID = 'PASTE_YOUR_CLIENT_ID.apps.googleusercontent.com';
+window.RD_ADMIN_GOOGLE_CLIENT_ID = '932956616994-tqa11spsr0ko8h6e4u3uqo7h99t6qq5j.apps.googleusercontent.com';

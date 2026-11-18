@@ -41,6 +41,92 @@
   })();
 </script>
 <link rel="stylesheet" href="app.css?v=528dc0b303">
+<script>
+  /* ---------- PHONE FIT ----------
+   * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
+   * The browser then ignores the viewport tag, lays the page out 980px wide and shrinks it: tiny text, desktop columns.
+   * When that happens on a touch screen, this scales the page back to the real screen width and turns on the
+   * phone layout rules (the @media max-width rules below) for that width. Normal phones and computers are untouched.
+   * Keep this block when updating Index.html. */
+  (function () {
+    var root = document.documentElement, applied = 1, added = [], units = [], timer = null;
+    var UNIT = /(-?\d*\.?\d+)((?:d|s|l)?v(?:h|w|min|max))\b/g;
+    function deviceWidth() {
+      var w = (window.screen && screen.width > 0) ? screen.width : Infinity, vv = window.visualViewport;
+      if (vv && vv.width > 0 && vv.scale > 0) w = Math.min(w, vv.width * vv.scale);
+      return w;
+    }
+    function touchScreen() {
+      return (navigator.maxTouchPoints || 0) > 0 || !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+    }
+    function sheets(fn) {
+      for (var i = 0; i < document.styleSheets.length; i++) {
+        var s = document.styleSheets[i], r = null;
+        try { r = s.cssRules; } catch (e) { r = null; }        // other sites' stylesheets (fonts) cannot be read: skipped
+        if (r) fn(s, r);
+      }
+    }
+    function widthRuleMatches(text, w) {                      // only pure width conditions, e.g. (max-width: 620px)
+      var parts = String(text).toLowerCase().split(/\s+and\s+/), ok = parts.length > 0;
+      for (var i = 0; i < parts.length; i++) {
+        var m = /^\s*\(\s*(max|min)-width\s*:\s*(\d*\.?\d+)px\s*\)\s*$/.exec(parts[i]);
+        if (!m) return false;
+        if (m[1] === 'max' ? w > +m[2] : w < +m[2]) ok = false;
+      }
+      return ok;
+    }
+    function scaleUnits(rules, z) {                          // 100vh/94vw etc. would otherwise be multiplied by the zoom
+      for (var i = 0; i < rules.length; i++) {
+        var r = rules[i];
+        if (r.cssRules && !r.style) { scaleUnits(r.cssRules, z); continue; }
+        if (!r.style) continue;
+        for (var k = 0; k < r.style.length; k++) {
+          var p = r.style[k], v = r.style.getPropertyValue(p);
+          if (!UNIT.test(v)) continue;
+          UNIT.lastIndex = 0;
+          units.push([r.style, p, v, r.style.getPropertyPriority(p)]);
+          r.style.setProperty(p, v.replace(UNIT, function (_, n, u) { return (+(n / z).toFixed(4)) + u; }), r.style.getPropertyPriority(p));
+        }
+      }
+    }
+    function reset() {
+      while (added.length) { var a = added.pop(); try { var list = a[0].cssRules; for (var i = list.length - 1; i >= 0; i--) if (list[i] === a[1]) { a[0].deleteRule(i); break; } } catch (e) {} }
+      while (units.length) { var u = units.pop(); try { u[0].setProperty(u[1], u[2], u[3]); } catch (e) {} }
+      root.style.zoom = ''; root.classList.remove('phone-fit'); applied = 1;
+    }
+    function fit() {
+      var layout = Math.round(window.innerWidth || root.clientWidth), device = Math.round(deviceWidth());   // innerWidth is not changed by the zoom
+      var need = touchScreen() && device > 0 && device < 1024 && layout > device * 1.15;
+      var zoom = need ? layout / device : 1;
+      if (Math.abs(zoom - applied) < 0.02) return;
+      reset();
+      if (!need) return;
+      sheets(function (sheet, rules) {
+        for (var i = rules.length - 1; i >= 0; i--) {         // copy each phone rule right after its @media block (same order)
+          var r = rules[i];
+          if (!r.media || !r.cssRules || (window.matchMedia && matchMedia(r.media.mediaText).matches) || !widthRuleMatches(r.media.mediaText, device)) continue;
+          for (var j = r.cssRules.length - 1; j >= 0; j--) {
+            try { sheet.insertRule(r.cssRules[j].cssText, i + 1); added.push([sheet, sheet.cssRules[i + 1]]); } catch (e) {}
+          }
+        }
+        scaleUnits(rules, zoom);
+      });
+      root.style.zoom = String(zoom); root.classList.add('phone-fit'); applied = zoom;
+    }
+    function later() { clearTimeout(timer); timer = setTimeout(fit, 150); }
+    window.PhoneFit = {
+      refresh: fit,
+      active: function () { return applied !== 1; },
+      // receipt images are drawn from the page: drawing happens at normal scale, then the fit returns
+      suspend: function () { var z = root.style.zoom; if (!z) return function () {}; root.style.zoom = ''; return function () { root.style.zoom = z; }; }
+    };
+    try { fit(); } catch (e) {}
+    addEventListener('DOMContentLoaded', function () { try { fit(); } catch (e) {} });
+    addEventListener('load', function () { try { fit(); } catch (e) {} });
+    addEventListener('resize', later);
+    addEventListener('orientationchange', later);
+  })();
+</script>
 </head>
 <body>
 <!-- ================= SUBSCRIPTION / LICENSE KEY GATE ================= -->
@@ -830,7 +916,7 @@
   </div>
 </div>
 
-<script src="app.js?v=24bc647639"></script>
+<script src="app.js?v=d2dd834a22"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

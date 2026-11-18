@@ -793,7 +793,10 @@
     holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;';
     holder.appendChild(clone);
     document.body.appendChild(holder);
-    return html2canvas(clone, {scale:2, backgroundColor:'#ffffff', useCORS:true}).then(function(canvas){
+    var resumeFit = window.PhoneFit ? PhoneFit.suspend() : function(){};   // draw the image at normal scale (see PHONE FIT)
+    return html2canvas(clone, {scale:2, backgroundColor:'#ffffff', useCORS:true})
+      .then(function(canvas){ resumeFit(); return canvas; }, function(e){ resumeFit(); throw e; })
+      .then(function(canvas){
       document.body.removeChild(holder);
       if (session !== TOKEN) throw new Error('The session changed before the confirmation could download.');
       var inv = String(invoiceNo !== undefined ? invoiceNo : $('invoiceNo').value).replace(/[^\w.-]+/g, '') || 'confirmation';

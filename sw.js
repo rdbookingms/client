@@ -7,8 +7,8 @@
  *  - app.css / app.js / gas-bridge.js carry a version (?v=...) and are kept until the next update.
  *  - Calls to the booking server (script.google.com) are never cached or touched.
  */
-const BUILD = '73ec3585e4';
-const ASSETS = ["./","app.css?v=528dc0b303","app.js?v=24bc647639","gas-bridge.js?v=1b45ec2dd1","config.js","terms.html","manifest.webmanifest","icon-192.png","icon-512.png","apple-touch-icon.png","favicon-32.png"];
+const BUILD = '322f21fe5f';
+const ASSETS = ["./","app.css?v=528dc0b303","app.js?v=d2dd834a22","gas-bridge.js?v=1b45ec2dd1","config.js","terms.html","manifest.webmanifest","icon-192.png","icon-512.png","apple-touch-icon.png","favicon-32.png"];
 const CACHE = 'rdb-' + BUILD;
 const RUNTIME = 'rdb-runtime';
 const CDN_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdnjs.cloudflare.com', 'cdn.jsdelivr.net'];

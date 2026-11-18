@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="../license-config.js"></script>
+<meta name="description" content="Invite resort owners to RD Booking Management System and earn a monthly share of their subscription.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RD Booking Management System">
+<meta property="og:title" content="RD Booking Management System - Referral partners">
+<meta property="og:description" content="Invite resort owners to RD Booking Management System and earn a monthly share of their subscription.">
+<meta property="og:url" content="https://rdbookingms.com/partners/">
+<meta property="og:image" content="https://rdbookingms.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<script src="../gas-bridge.js?v=fd3a78ecf0"></script>
+<link rel="preconnect" href="https://script.google.com" crossorigin>
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#0f9aa8">
+<base target="_top">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Referral partners</title>
+<!--
+  REFERRAL PARTNER PAGE (new in v8)
+  Add this as a third file of the License Admin project: + > HTML > name it "Referrer" > paste this.
+  It opens at  <License Server URL>?page=referrer . Partners sign in with their email and a 6-digit PIN.
+-->
+<style>
+  :root { --teal:#0f9aa8; --teal-d:#0b6d79; --ink:#17333a; --muted:#5b6f75; --line:#dfe9eb; --bg:#f1f5f6; --ok:#1b7f3b; --ok-bg:#e2f4e7; --warn:#9a5b00; --warn-bg:#fdf0d5; --bad:#b3261e; --bad-bg:#fde7e5; --off:#56656a; --off-bg:#e7ecee; }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; background:var(--bg); color:var(--ink); font-size:14.5px; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1040px; margin:0 auto; padding:0 16px 48px; transition:max-width .2s ease; }
+  .hero { background:linear-gradient(140deg,#0b6d79 0%,#0f9aa8 55%,#55c9a6 100%); color:#fff; padding:26px 16px 70px; text-align:center; }
+  .hero h1 { margin:0 0 6px; font-size:26px; letter-spacing:-.01em; } .hero p { margin:0 auto; max-width:560px; opacity:.95; line-height:1.5; }
+  .hero .big { display:inline-block; margin-top:14px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.35); border-radius:14px; padding:10px 18px; font-size:15px; }
+  .hero .big b { font-size:22px; }
+  .auth { max-width:420px; margin:-48px auto 0; background:#fff; border-radius:18px; padding:22px 22px 20px; box-shadow:0 14px 40px rgba(6,40,46,.18); }
+  .seg { display:flex; background:#e1eaec; border-radius:10px; padding:3px; }
+  .seg button { flex:1; border:0; background:none; font:inherit; font-size:13px; font-weight:700; color:var(--muted); padding:8px 10px; border-radius:8px; cursor:pointer; }
+  .seg button.on { background:#fff; color:var(--teal-d); box-shadow:0 1px 3px rgba(16,42,48,.16); }
+  label { display:block; font-size:12px; font-weight:700; margin:12px 0 4px; text-align:left; }
+  label.chk { display:flex; gap:8px; align-items:flex-start; font-weight:400; font-size:13px; line-height:1.4; } label.chk input { width:auto; margin-top:2px; }
+  input, select, textarea { width:100%; padding:10px 11px; border:1px solid #c6d5d9; border-radius:9px; font:inherit; background:#fff; color:var(--ink); }
+  input:focus, select:focus, button:focus-visible { outline:2px solid var(--teal); outline-offset:1px; }
+  input.pin { text-align:center; font-size:22px; letter-spacing:.4em; font-weight:800; }
+  .btn { font:inherit; font-weight:700; border:0; border-radius:9px; padding:10px 15px; cursor:pointer; background:var(--off-bg); color:var(--ink); white-space:nowrap; }
+  .btn.pri { background:var(--teal); color:#fff; } .btn.wide { width:100%; margin-top:14px; padding:12px; font-size:15px; } .btn.sm { padding:6px 10px; font-size:12.5px; }
+  .btn.danger { background:var(--bad-bg); color:var(--bad); } .btn:disabled { opacity:.6; cursor:progress; }
+  .alt { display:inline-block; margin-top:12px; color:var(--teal-d); font-size:13px; font-weight:700; cursor:pointer; }
+  .hint { color:var(--muted); font-size:12.5px; line-height:1.45; margin-top:5px; }
+  .msg { min-height:18px; margin-top:10px; font-size:13px; font-weight:700; color:var(--bad); } .msg.good { color:var(--ok); }
+  .top { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:14px 0 10px; }
+  .top h1 { margin:0; font-size:21px; } .top .me { color:var(--muted); font-size:12.5px; }
+  .tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; } .tools .seg { display:inline-flex; } .tools .seg button { flex:none; font-size:12px; padding:6px 10px; }
+  .codecard { background:linear-gradient(120deg,#0b6d79,#0f9aa8 60%,#3fbf9c); color:#fff; border-radius:18px; padding:18px 20px; display:grid; grid-template-columns:auto 1fr; gap:14px 26px; align-items:center; box-shadow:0 10px 28px rgba(11,109,121,.28); }
+  .codecard .lbl { font-size:12px; text-transform:uppercase; letter-spacing:.08em; opacity:.85; }
+  .codecard .code { font-family:Consolas,Menlo,monospace; font-size:32px; font-weight:800; letter-spacing:.1em; display:flex; align-items:center; gap:10px; }
+  .codecard .link { font-family:Consolas,Menlo,monospace; font-size:12.5px; word-break:break-all; background:rgba(255,255,255,.14); border-radius:9px; padding:8px 10px; display:flex; gap:8px; align-items:center; }
+  .codecard .link span { flex:1; }
+  .ico { border:0; cursor:pointer; background:rgba(255,255,255,.2); color:#fff; border-radius:8px; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; flex:none; }
+  .ico:hover { background:rgba(255,255,255,.32); } .ico svg { width:17px; height:17px; }
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:14px 0; }
+  .tile { background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 14px; box-shadow:0 1px 2px rgba(16,42,48,.05); min-width:0; }
+  .tile .n { font-size:22px; font-weight:800; overflow-wrap:anywhere; } .tile .l { color:var(--muted); font-size:12.5px; margin-top:2px; } .tile.hl .n { color:var(--teal-d); }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:14px; box-shadow:0 1px 2px rgba(16,42,48,.05); }
+  .card h2 { margin:0 0 4px; font-size:16px; } .card p.sub { margin:0 0 8px; color:var(--muted); font-size:13px; line-height:1.45; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; } .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
+  table { width:100%; border-collapse:collapse; } th { text-align:left; font-size:11.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:8px 8px; border-bottom:1px solid var(--line); }
+  td { padding:9px 8px; border-bottom:1px solid var(--line); vertical-align:middle; } tr:last-child td { border-bottom:0; } td.num, th.num { text-align:right; white-space:nowrap; }
+  tr.void td { color:var(--muted); text-decoration:line-through; } .em { color:var(--muted); font-size:12.5px; }
+  .badge { display:inline-block; border-radius:20px; padding:3px 10px; font-size:12px; font-weight:700; white-space:nowrap; }
+  .b-ok { background:var(--ok-bg); color:var(--ok); } .b-warn { background:var(--warn-bg); color:var(--warn); } .b-off { background:var(--off-bg); color:var(--off); }
+  .qrbox { display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap; } .qrbox img, .qrbox .none { width:150px; height:150px; border-radius:12px; border:1px solid var(--line); object-fit:contain; background:#fff; }
+  .qrbox .none { border-style:dashed; display:flex; align-items:center; justify-content:center; text-align:center; color:var(--muted); font-size:12.5px; padding:10px; }
+  .empty { color:var(--muted); font-size:13px; padding:10px 0; }
+  #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 16px; border-radius:10px; font-weight:700; font-size:13.5px; display:none; z-index:90; max-width:92vw; } #toast.bad { background:var(--bad); }
+  #busy { position:fixed; inset:0; background:rgba(255,255,255,.55); display:none; align-items:center; justify-content:center; z-index:80; font-weight:700; cursor:progress; }
+  #busy div { background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 20px; box-shadow:0 6px 24px rgba(0,0,0,.15); }
+  @media (max-width:760px) { .tiles { grid-template-columns:1fr 1fr; } .cols, .grid2 { grid-template-columns:1fr; } .codecard { grid-template-columns:1fr; } .codecard .code { font-size:26px; }
+    table, tbody, tr, td { display:block; width:100%; } thead { display:none; } tr { border:1px solid var(--line); border-radius:12px; margin-bottom:8px; padding:4px 0; } td { border:0; padding:5px 12px; } td.num { text-align:left; }
+    td[data-l]:before { content:attr(data-l) ': '; color:var(--muted); font-size:12px; font-weight:700; } }
+  body { line-height:1.5; }
+  :root { --teal:#087581; }
+  button:disabled { opacity:.65; cursor:progress; }
+  label.chk input { width:18px; height:18px; flex:none; accent-color:var(--teal); }
+  .hint, .card p.sub { line-height:1.6; }
+  td.num, .tile .n { font-variant-numeric:tabular-nums; }
+  @media(max-width:540px) { input, select, textarea { font-size:16px; } .wrap { padding-left:12px; padding-right:12px; } .top { position:static; } }
+  @media(prefers-reduced-motion:reduce) { *, *:before, *:after { transition:none !important; scroll-behavior:auto !important; } }
+</style>
+</head>
+<body>
+<!-- ============ SIGN IN / SIGN UP ============ -->
+<div id="authScreen">
+  <div class="hero">
+    <h1 id="hTitle">Referral partner program</h1>
+    <p id="hText">Invite resort owners and earn a monthly share while their paid referral stays active.</p>
+    <div class="big" id="hBig" style="display:none"></div>
+  </div>
+  <div class="auth">
+    <div class="seg" id="authSeg"><button type="button" data-a="in" class="on">Sign in</button><button type="button" data-a="up">Become a partner</button></div>
+    <div id="a_in">
+      <label for="inEmail">Email</label><input id="inEmail" type="email" autocomplete="email" maxlength="120">
+      <label for="inPin">6-digit PIN</label><input class="pin" id="inPin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="------">
+      <button class="btn pri wide" id="btnIn" type="button">Sign in</button>
+      <div style="text-align:center"><a class="alt" id="lnkReset">Set or reset my PIN</a></div>
+    </div>
+    <div id="a_up" style="display:none">
+      <label for="upName">Your name</label><input id="upName" maxlength="100" autocomplete="name">
+      <label for="upEmail">Email</label><input id="upEmail" type="email" autocomplete="email" maxlength="120">
+      <label for="upPhone">Mobile number (optional)</label><input id="upPhone" type="tel" maxlength="40" autocomplete="tel">
+      <div class="grid2">
+        <div><label for="upPin1">Choose a 6-digit PIN</label><input class="pin" id="upPin1" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="------"></div>
+        <div><label for="upPin2">Type it again</label><input class="pin" id="upPin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="------"></div>
+      </div>
+      <label class="chk"><input id="upOk" type="checkbox"><span>I accept the referral program terms<span id="upTerms"></span>. Earnings are paid out manually by the provider to the payout details I give.</span></label>
+      <button class="btn pri wide" id="btnUp" type="button">Create my partner account</button>
+    </div>
+    <div id="a_rs" style="display:none">
+      <p class="hint" style="font-size:13.5px">We email a 6-digit code to your partner email address. Enter it with your new PIN.</p>
+      <label for="rsEmail">Email</label><input id="rsEmail" type="email" autocomplete="email" maxlength="120">
+      <button class="btn wide" id="btnRsSend" type="button">Email me a code</button>
+      <div id="rsStep2" style="display:none">
+        <label for="rsCode">6-digit code from the email</label><input class="pin" id="rsCode" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="------">
+        <div class="grid2">
+          <div><label for="rsPin1">New PIN</label><input class="pin" id="rsPin1" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="------"></div>
+          <div><label for="rsPin2">Type it again</label><input class="pin" id="rsPin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="------"></div>
+        </div>
+        <button class="btn pri wide" id="btnRsSave" type="button">Save my new PIN</button>
+      </div>
+      <div style="text-align:center"><a class="alt" id="lnkRsBack">Back to sign in</a></div>
+    </div>
+    <div class="msg" id="aMsg" aria-live="polite"></div>
+  </div>
+</div>
+
+<!-- ============ DASHBOARD ============ -->
+<div class="wrap" id="dash" style="display:none">
+  <div class="top">
+    <div><h1 id="dTitle">Referral dashboard</h1><div class="me" id="dMe"></div></div>
+    <div class="tools">
+      <button class="btn" id="btnReload" type="button">&#8635; Refresh</button>
+      <button class="btn" id="btnOut" type="button">Sign out</button>
+    </div>
+  </div>
+  <div class="codecard">
+    <div><div class="lbl">Your referral code</div><div class="code"><span id="dCode"></span><button class="ico" id="btnCopyCode" type="button" title="Copy code" aria-label="Copy code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div></div>
+    <div><div class="lbl">Share this link - your code is filled in for them</div><div class="link"><span id="dLink"></span><button class="ico" id="btnCopyLink" type="button" title="Copy link" aria-label="Copy link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+      <div style="font-size:12.5px;opacity:.92;margin-top:8px" id="dHow"></div></div>
+  </div>
+  <div class="tiles">
+    <div class="tile hl"><div class="n" id="tBal">0</div><div class="l">Balance to be paid out</div></div>
+    <div class="tile"><div class="n" id="tEarned">0</div><div class="l">Earned in total</div></div>
+    <div class="tile"><div class="n" id="tPaid">0</div><div class="l">Paid out so far</div></div>
+    <div class="tile"><div class="n" id="tAct">0</div><div class="l">Active referrals</div><div class="em" id="tActS"></div></div>
+  </div>
+  <div class="card"><h2>Businesses you referred</h2><p class="sub">Names are shortened for privacy. You earn while a business is inside its earning period and paying.</p><div id="dRefs"></div></div>
+  <div class="cols">
+    <div class="card"><h2>Earnings history</h2><div id="dEarn"></div></div>
+    <div class="card"><h2>Payout history</h2><div id="dPay"></div></div>
+  </div>
+  <div class="cols">
+    <div class="card">
+      <h2>Preferred payout details</h2><p class="sub">Where we should send your earnings. Payouts are sent manually.</p>
+      <div class="grid2">
+        <div><label for="pMethod">Pay me by</label><input id="pMethod" maxlength="40" list="pMethods" placeholder="GCash, Maya, bank..."><datalist id="pMethods"><option>GCash</option><option>Maya</option><option>Bank transfer</option><option>PayPal</option></datalist></div>
+        <div><label for="pPhone">My mobile number</label><input id="pPhone" type="tel" maxlength="40"></div>
+        <div><label for="pName">Account name</label><input id="pName" maxlength="80"></div>
+        <div><label for="pNo">Account / mobile number</label><input id="pNo" maxlength="60"></div>
+      </div>
+      <label for="pNotes">Notes (bank name, branch, best time...)</label><input id="pNotes" maxlength="200">
+      <div class="msg" id="pMsg"></div>
+      <button class="btn pri" id="btnPSave" type="button">Save payout details</button>
+    </div>
+    <div class="card">
+      <h2>Payout QR code</h2><p class="sub">Upload the "receive money" QR code of your e-wallet or bank so you can be paid by scanning it.</p>
+      <div class="qrbox"><div id="qPrev"></div>
+        <div style="flex:1;min-width:200px"><input id="qFile" type="file" accept="image/png,image/jpeg"><div class="hint">PNG or JPG. It is resized to 420 pixels.</div>
+          <div class="msg" id="qMsg"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" id="btnQSave" type="button">Upload QR code</button><button class="btn" id="btnQDel" type="button">Remove</button></div></div></div>
+      <h2 style="margin-top:18px">Change my PIN</h2>
+      <div class="grid2"><div><label for="cOld">Current PIN</label><input class="pin" id="cOld" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="------"></div>
+        <div><label for="cNew">New PIN</label><input class="pin" id="cNew" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="------"></div></div>
+      <div class="msg" id="cMsg"></div>
+      <button class="btn" id="btnCSave" type="button">Change PIN</button>
+    </div>
+  </div>
+  <p class="hint" id="dFoot" style="text-align:center"></p>
+</div>
+<div id="busy"><div>Working...</div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+  var TOKEN = '', D = null, INFO = null, qrPending = null;
+  try { TOKEN = sessionStorage.getItem('rp_tok') || ''; } catch (e0) {}
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(t) { var d = document.createElement('div'); d.textContent = (t === null || t === undefined) ? '' : String(t); return d.innerHTML; }
+  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function nice(s) { if (!s) return ''; var p = String(s).split('-'); return p.length === 3 ? MON[+p[1] - 1] + ' ' + (+p[2]) + ', ' + p[0] : s; }
+  function money(n) {
+    n = Math.round((Number(n) || 0) * 100) / 100;
+    var p = (n % 1 === 0 ? String(n) : n.toFixed(2)).split('.');
+    p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return ((D && D.currency) || (INFO && INFO.currency) || '') + p.join('.');
+  }
+  function busy(on) { $('busy').style.display = on ? 'flex' : 'none'; }
+  var toastT = null;
+  function toast(m, bad) { var t = $('toast'); t.textContent = m; t.className = bad ? 'bad' : ''; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(function () { t.style.display = 'none'; }, bad ? 7000 : 3500); }
+  function msg(id, m, good) { var e = $(id); e.textContent = m || ''; e.className = 'msg' + (good ? ' good' : ''); }
+  function setToken(t) { TOKEN = t || ''; try { if (TOKEN) sessionStorage.setItem('rp_tok', TOKEN); else sessionStorage.removeItem('rp_tok'); } catch (e) {} }
+  function copy(text, what) {
+    function fallback() {
+      var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); toast(what + ' copied.'); } catch (e) { toast('Could not copy. Select the text and copy it by hand.', true); }
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { toast(what + ' copied.'); }, fallback); else fallback();
+  }
+  /* server call: fn(args...) -> done(v). A session that ended goes back to the sign-in page. */
+  function run(name, args, done, msgId) {
+    if (!(window.google && google.script)) { toast('This page only works from its web app link.', true); return; }
+    busy(true);
+    var r = google.script.run
+      .withSuccessHandler(function (v) {
+        busy(false); v = v || {};
+        if (v.expired) { setToken(''); showAuth('in'); msg('aMsg', v.message); return; }
+        if (v.ok === false) { if (msgId) msg(msgId, v.message); else toast(v.message, true); return; }
+        done(v);
+      })
+      .withFailureHandler(function (e) { busy(false); var m = (e && e.message) || String(e); if (msgId) msg(msgId, m); else toast(m, true); });
+    r[name].apply(r, args || []);
+  }
+  function digits(el) { el.value = el.value.replace(/\D/g, '').slice(0, 6); }
+
+
+  /* ---------- sign in / sign up / reset ---------- */
+  function showAuth(st) {
+    $('dash').style.display = 'none'; $('authScreen').style.display = '';
+    ['in', 'up', 'rs'].forEach(function (k) { $('a_' + k).style.display = k === st ? '' : 'none'; });
+    Array.prototype.forEach.call(document.querySelectorAll('#authSeg button'), function (b) { b.classList.toggle('on', b.getAttribute('data-a') === st); });
+    $('authSeg').style.display = st === 'rs' ? 'none' : 'flex';
+    msg('aMsg', '');
+    if (st === 'up' && INFO && !INFO.signup) msg('aMsg', 'Partner sign-up is not open right now. Please contact us.');
+  }
+  function applyInfo(i) {
+    INFO = i || {};
+    document.title = (INFO.product || 'Booking system') + ' - Referral partners';
+    $('hTitle').textContent = (INFO.product || 'Booking system') + ' referral partners';
+    if (INFO.on === false) { $('hText').textContent = 'The referral program is paused right now. Existing partners can still sign in.'; $('hBig').style.display = 'none'; return; }
+    $('hText').textContent = 'Invite resort owners and earn a monthly share while their paid referral stays active.';
+    // Share % and earning period come from License Admin > Referrals (Partner share / Partner earning period), read on every visit.
+    var pct = Number(INFO.sharePct), months = INFO.months;
+    if (!(pct > 0)) { $('hBig').style.display = 'none'; $('hBig').innerHTML = ''; }
+    else {
+      $('hBig').innerHTML = 'Earn <b>' + esc(+pct.toFixed(2)) + '%</b> monthly share of recurring plans, ' +
+        (months === 'Lifetime' ? '<b>for life</b> while each referral stays active'
+          : 'for up to <b>' + esc(months) + (Number(months) === 1 ? ' month' : ' months') + '</b> per referral');
+      $('hBig').style.display = '';
+    }
+    $('upTerms').innerHTML = INFO.termsUrl ? ' (<a href="' + esc(INFO.termsUrl) + '" target="_blank" rel="noopener noreferrer">Terms and Conditions</a>)' : '';
+  }
+  function doIn() {
+    clearTimeout(loginTimer);
+    if ($('a_in').style.display === 'none' || $('authScreen').style.display === 'none' || $('busy').style.display === 'flex') return;
+    var em = $('inEmail').value.trim(), pin = $('inPin').value;
+    if (!em) { msg('aMsg', 'Enter your email address.'); return; }
+    if (!/^\d{6}$/.test(pin)) { msg('aMsg', 'Enter your 6-digit PIN.'); return; }
+    msg('aMsg', '');
+    run('refLogin', [em, pin], function (v) { $('inPin').value = ''; setToken(v.token); load(v); }, 'aMsg');
+  }
+  function doUp() {
+    var n = $('upName').value.trim(), em = $('upEmail').value.trim(), p1 = $('upPin1').value, p2 = $('upPin2').value;
+    if (!n) { msg('aMsg', 'Please enter your name.'); return; }
+    if (!em) { msg('aMsg', 'Please enter your email address.'); return; }
+    if (!/^\d{6}$/.test(p1)) { msg('aMsg', 'Choose a PIN of exactly 6 digits.'); return; }
+    if (p1 !== p2) { msg('aMsg', 'The two PINs do not match.'); return; }
+    if (!$('upOk').checked) { msg('aMsg', 'Please accept the referral program terms to sign up.'); return; }
+    msg('aMsg', '');
+    run('refSignup', [{ name: n, email: em, phone: $('upPhone').value.trim(), pin: p1, accepted: true }], function (v) {
+      ['upName', 'upEmail', 'upPhone', 'upPin1', 'upPin2'].forEach(function (id) { $(id).value = ''; }); $('upOk').checked = false;
+      setToken(v.token); load(v); toast('Welcome! Your referral code is ' + v.me.code + '. It was emailed to you too.');
+    }, 'aMsg');
+  }
+  function doRsSend() {
+    var em = $('rsEmail').value.trim();
+    if (!em) { msg('aMsg', 'Enter your email address.'); return; }
+    msg('aMsg', '');
+    run('refSendCode', [em], function (v) { $('rsStep2').style.display = ''; msg('aMsg', v.message, true); $('rsCode').focus(); }, 'aMsg');
+  }
+  function doRsSave() {
+    var p1 = $('rsPin1').value, p2 = $('rsPin2').value, code = $('rsCode').value;
+    if (!/^\d{6}$/.test(code)) { msg('aMsg', 'Enter the 6-digit code from the email.'); return; }
+    if (!/^\d{6}$/.test(p1)) { msg('aMsg', 'The new PIN must be exactly 6 digits.'); return; }
+    if (p1 !== p2) { msg('aMsg', 'The two PINs do not match.'); return; }
+    msg('aMsg', '');
+    run('refResetPin', [$('rsEmail').value.trim(), code, p1], function () {
+      $('inEmail').value = $('rsEmail').value.trim(); ['rsCode', 'rsPin1', 'rsPin2'].forEach(function (id) { $(id).value = ''; }); $('rsStep2').style.display = 'none';
+      showAuth('in'); msg('aMsg', 'PIN saved. Sign in with your new PIN.', true); $('inPin').focus();
+    }, 'aMsg');
+  }
+
+  /* ---------- dashboard ---------- */
+  function table(head, rows, empty) {
+    if (!rows.length) return '<div class="empty">' + empty + '</div>';
+    return '<table><thead><tr>' + head.map(function (h) { return '<th' + (h[1] ? ' class="num"' : '') + '>' + h[0] + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table>';
+  }
+  function stateBadge(s) { return '<span class="badge ' + (s === 'Active' ? 'b-ok' : s === 'On demo' ? 'b-warn' : 'b-off') + '">' + esc(s) + '</span>'; }
+  function load(v) {
+    D = v;
+    $('authScreen').style.display = 'none'; $('dash').style.display = '';
+    document.title = (v.product || 'Booking system') + ' - Referral dashboard';
+    $('dTitle').textContent = 'Hello, ' + v.me.name; $('dMe').textContent = v.me.email + '  |  ' + (v.product || '') + ' referral partner';
+    $('dCode').textContent = v.me.code; $('dLink').textContent = v.link || 'The booking app link is not set up yet - share your code instead.';
+    $('dHow').textContent = v.on === false ? 'The referral program is paused right now.' :
+      'You earn ' + v.sharePct + '% monthly share of confirmed recurring subscription fees for an active referral, ' + (v.months === 'Lifetime' ? 'with a Lifetime earning period and no month cutoff' : 'for up to ' + v.months + ' months from its first payment') + '. Quarterly/yearly fees accrue monthly; payouts are sent manually.';
+    var t = v.totals || {};
+    $('tBal').textContent = money(t.balance); $('tEarned').textContent = money(t.earned); $('tPaid').textContent = money(t.paid);
+    $('tAct').textContent = t.active || 0; $('tActS').textContent = (t.total || 0) + ' signed up with your code';
+    $('dRefs').innerHTML = table([['Business'], ['Plan'], ['Status'], ['First payment'], ['You earn until'], ['Earned', 1]], (v.referees || []).map(function (r) {
+      return '<tr><td><b>' + esc(r.name) + '</b><div class="em">Joined ' + esc(nice(r.joined)) + '</div></td><td data-l="Plan">' + esc(r.tier) + '</td>' +
+        '<td data-l="Status">' + stateBadge(r.state) + '</td>' +
+        '<td data-l="First payment">' + (r.firstPaid ? esc(nice(r.firstPaid)) : '<span class="em">Not yet</span>') + '</td><td data-l="You earn until">' + (r.lifetime || v.months === 'Lifetime' ? 'Lifetime' : r.until ? esc(nice(r.until)) : '<span class="em">Starts with the first payment</span>') + '</td>' +
+        '<td class="num" data-l="Earned"><b>' + esc(money(r.earned)) + '</b></td></tr>';
+    }), 'Nobody has signed up with your code yet. Share your link to get started.');
+    $('dEarn').innerHTML = table([['Date'], ['Business'], ['Fee basis', 1], ['You earned', 1]], (v.earnings || []).map(function (e) {
+      return '<tr' + (e.isVoid ? ' class="void"' : '') + '><td data-l="Date">' + esc(nice(e.date)) + '</td><td data-l="Business">' + esc(e.client) + '</td><td class="num" data-l="Fee basis">' + esc(money(e.payAmount)) +
+        ' <span class="em">x ' + e.pct + '%</span></td><td class="num" data-l="You earned"><b>' + esc(money(e.amount)) + '</b>' + (e.isVoid ? ' <span class="em">(cancelled)</span>' : '') + '</td></tr>';
+    }), 'No earnings yet. They appear here when a business you referred pays for a plan.');
+    $('dPay').innerHTML = table([['Date'], ['Sent by'], ['Amount', 1]], (v.payouts || []).map(function (o) {
+      return '<tr' + (o.isVoid ? ' class="void"' : '') + '><td data-l="Date">' + esc(nice(o.date)) + '</td><td data-l="Sent by">' + esc([o.method, o.reference].filter(Boolean).join(' / ') || '-') + (o.notes ? '<div class="em">' + esc(o.notes) + '</div>' : '') + '</td>' +
+        '<td class="num" data-l="Amount"><b>' + esc(money(o.amount)) + '</b>' + (o.isVoid ? ' <span class="em">(cancelled)</span>' : '') + '</td></tr>';
+    }), 'No payouts yet.');
+    $('pMethod').value = v.me.method || ''; $('pPhone').value = v.me.phone || ''; $('pName').value = v.me.accName || ''; $('pNo').value = v.me.accNo || ''; $('pNotes').value = v.me.pnotes || '';
+    qrPending = null; $('qFile').value = ''; msg('qMsg', ''); msg('pMsg', ''); msg('cMsg', '');
+    $('qPrev').innerHTML = v.me.qr ? '<img src="' + v.me.qr + '" alt="Your payout QR code">' : '<div class="none">No QR code uploaded yet</div>';
+    var c = v.contact || {}, parts = [];
+    if (c.email) parts.push('<a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>');
+    if (c.phone) parts.push(esc(c.phone));
+    $('dFoot').innerHTML = parts.length ? 'Questions about your earnings or payouts? Contact us: ' + parts.join(' / ') : '';
+  }
+  function readQr(file) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var img = new Image();
+      img.onload = function () {
+        var max = 420, sc = Math.min(1, max / Math.max(img.width, img.height)), cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
+        var g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+        qrPending = cv.toDataURL('image/png');
+        if (qrPending.length > 80000) qrPending = cv.toDataURL('image/jpeg', 0.85);
+        $('qPrev').innerHTML = '<img src="' + qrPending + '" alt="New QR code (not uploaded yet)">'; msg('qMsg', 'Press "Upload QR code" to save it.', true);
+      };
+      img.onerror = function () { msg('qMsg', 'That picture could not be read.'); };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ---------- events ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('#authSeg button'), function (b) { b.addEventListener('click', function () { showAuth(b.getAttribute('data-a')); }); });
+  ['inPin', 'upPin1', 'upPin2', 'rsCode', 'rsPin1', 'rsPin2', 'cOld', 'cNew'].forEach(function (id) { $(id).addEventListener('input', function () { digits(this); }); });
+  var loginTimer;
+  function autoSignIn(e) {
+    clearTimeout(loginTimer);
+    var pin = $('inPin').value, email = $('inEmail').value.trim();
+    if (!(e && e.isComposing) && /^\d{6}$/.test(pin) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) loginTimer = setTimeout(function () {
+      if ($('inPin').value === pin && $('inEmail').value.trim() === email) doIn();
+    }, 140);
+  }
+  $('inPin').addEventListener('input', autoSignIn); $('inEmail').addEventListener('input', autoSignIn);
+  $('btnIn').addEventListener('click', doIn); $('inPin').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doIn(); } });
+  $('btnUp').addEventListener('click', doUp); $('btnRsSend').addEventListener('click', doRsSend); $('btnRsSave').addEventListener('click', doRsSave);
+  $('lnkReset').addEventListener('click', function () { $('rsEmail').value = $('inEmail').value; $('rsStep2').style.display = 'none'; showAuth('rs'); });
+  $('lnkRsBack').addEventListener('click', function () { showAuth('in'); });
+  $('btnCopyCode').addEventListener('click', function () { if (D) copy(D.me.code, 'Referral code'); });
+  $('btnCopyLink').addEventListener('click', function () { if (D && D.link) copy(D.link, 'Link'); else if (D) copy(D.me.code, 'Referral code'); });
+  $('btnReload').addEventListener('click', function () { run('refData', [TOKEN], function (v) { load(v); toast('Up to date.'); }); });
+  $('btnOut').addEventListener('click', function () { var t = TOKEN; setToken(''); D = null; if (window.google && google.script) google.script.run.refLogout(t); showAuth('in'); });
+  $('btnPSave').addEventListener('click', function () {
+    msg('pMsg', '');
+    run('refSavePayout', [TOKEN, { method: $('pMethod').value, accName: $('pName').value, accNo: $('pNo').value, pnotes: $('pNotes').value, phone: $('pPhone').value }], function (v) { load(v); toast('Payout details saved.'); }, 'pMsg');
+  });
+  $('qFile').addEventListener('change', function () { if (this.files && this.files[0]) readQr(this.files[0]); });
+  $('btnQSave').addEventListener('click', function () {
+    if (!qrPending) { msg('qMsg', 'Choose a picture of your QR code first.'); return; }
+    run('refSaveQr', [TOKEN, qrPending], function (v) { load(v); toast('QR code uploaded.'); }, 'qMsg');
+  });
+  $('btnQDel').addEventListener('click', function () { run('refSaveQr', [TOKEN, ''], function (v) { load(v); toast('QR code removed.'); }, 'qMsg'); });
+  $('btnCSave').addEventListener('click', function () {
+    var o = $('cOld').value, n = $('cNew').value;
+    if (!/^\d{6}$/.test(o) || !/^\d{6}$/.test(n)) { msg('cMsg', 'Enter your current PIN and a new 6-digit PIN.'); return; }
+    msg('cMsg', '');
+    run('refChangePin', [TOKEN, o, n], function () { $('cOld').value = ''; $('cNew').value = ''; msg('cMsg', 'PIN changed.', true); }, 'cMsg');
+  });
+
+  // Re-read the program terms when someone comes back to a page left open, so a changed share or period shows without reloading.
+  var infoAt = Date.now();
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible' || Date.now() - infoAt < 60000 || !(window.google && google.script)) return;
+    if ($('authScreen').style.display === 'none') return;
+    infoAt = Date.now();
+    google.script.run.withSuccessHandler(applyInfo).withFailureHandler(function () {}).refInfo();
+  });
+
+  if (window.google && google.script) {
+    google.script.run.withSuccessHandler(applyInfo).withFailureHandler(function () {}).refInfo();
+    if (TOKEN) run('refData', [TOKEN], load); else showAuth('in');
+  } else showAuth('in');
+</script>
+</body>
+</html>

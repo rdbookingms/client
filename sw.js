@@ -6,9 +6,10 @@
  *    so updates show up on the next visit. If the connection is slow or down, the saved copy opens.
  *  - app.css / app.js / gas-bridge.js carry a version (?v=...) and are kept until the next update.
  *  - Calls to the booking server (script.google.com) are never cached or touched.
+ *  - Pages in sub-folders (the partner page and the Admin panel) are left alone: always loaded fresh.
  */
-const BUILD = 'd624a863a5';
-const ASSETS = ["./","app.css?v=528dc0b303","app.js?v=d2dd834a22","gas-bridge.js?v=1b45ec2dd1","config.js","terms.html","manifest.webmanifest","icon-192.png","icon-512.png","apple-touch-icon.png","favicon-32.png"];
+const BUILD = '830683970a';
+const ASSETS = ["./","app.css?v=528dc0b303","app.js?v=d2dd834a22","gas-bridge.js?v=fd3a78ecf0","config.js","terms.html","manifest.webmanifest","icon-192.png","icon-512.png","apple-touch-icon.png","favicon-32.png"];
 const CACHE = 'rdb-' + BUILD;
 const RUNTIME = 'rdb-runtime';
 const CDN_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdnjs.cloudflare.com', 'cdn.jsdelivr.net'];
@@ -54,6 +55,7 @@ self.addEventListener('fetch', event => {
   const url = new URL(req.url);
 
   if (url.origin === self.location.origin) {
+    if (url.pathname.indexOf('/', 1) > 0) return;                     // /partners/, /admin/ ...: not part of the booking app, never cached
     if (req.mode === 'navigate') { event.respondWith(networkFirst(req, pageKey(url), 4000)); return; }
     if (url.searchParams.has('v')) { event.respondWith(cacheFirst(req, CACHE)); return; }   // versioned: safe to keep
     event.respondWith(networkFirst(req, url.pathname.replace(/^.*\//, '') || './', 0));    // config.js, icons, ...

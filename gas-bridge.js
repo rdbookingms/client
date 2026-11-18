@@ -8,6 +8,10 @@
  *   -> ok(result) or fail(Error)
  *
  * Index.html needs no other changes: it already checks for window.google.script and calls the server through it.
+ *
+ * Pages that need a Google sign-in (the hosted License Admin panel) set window.RD_AUTH_GATE before this file runs:
+ *   { ready(): boolean, token(): string, wait(fn), needed(message) }
+ * Calls then carry the ID token, wait while nobody is signed in, and are retried once after a new sign-in.
  */
 (function () {
   'use strict';
@@ -31,7 +35,9 @@
     return err;
   }
 
-  function call(name, args, h) {
+  function call(name, args, h, retried) {
+    var gate = window.RD_AUTH_GATE;
+    if (gate && !gate.ready()) { gate.wait(function () { call(name, args, h, retried); }); return; }
     function fail(err) {
       if (h.fail) later(function (e) { h.fail(e, h.user); }, err);
       else if (window.console) console.error(err);
@@ -43,7 +49,7 @@
     var undef = [];
     for (var i = 0; i < args.length; i++) if (args[i] === undefined) undef.push(i);
     var body;
-    try { body = JSON.stringify({ fn: name, args: args, undef: undef }); }
+    try { body = JSON.stringify({ fn: name, args: args, undef: undef, idToken: gate ? gate.token() : undefined }); }
     catch (e) { fail(makeError('Could not send this request: ' + e.message)); return; }
 
     fetch(API, {
@@ -66,6 +72,10 @@
         throw makeError('Unexpected answer from the booking server (HTTP ' + r.status + '). Please try again.', 'ServerError');
       }
       if (o.ok) { if (h.ok) later(function (v) { h.ok(v, h.user); }, o.result); }
+      else if (gate && !retried && (o.name === 'GoogleSignInRequired' || o.name === 'NotOwner')) {
+        gate.needed(o.error, o.name);                              // show the sign-in again, then repeat this call once
+        gate.wait(function () { call(name, args, h, true); });
+      }
       else fail(makeError(o.error, o.name));
     }).catch(function (e) {
       if (e && e.fromBridge) fail(e);

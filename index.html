@@ -243,8 +243,8 @@
       <button class="ghost" id="btnPrSend" type="button" style="width:100%">Email me a code</button>
       <div id="prStep2" style="display:none;margin-top:10px;text-align:left">
         <label>6-digit code</label><input class="pin-input" id="prCode" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="------">
-        <label>New Admin PIN (6 digits)</label><input class="pin-input" id="prPin1" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="------">
-        <label>Confirm new Admin PIN</label><input class="pin-input" id="prPin2" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="------">
+        <label>New Admin PIN (6 digits)</label><input class="pin-input" id="prPin1" type="password" inputmode="numeric" maxlength="6" pattern="[0-9]*" autocomplete="off" placeholder="------">
+        <label>Confirm new Admin PIN</label><input class="pin-input" id="prPin2" type="password" inputmode="numeric" maxlength="6" pattern="[0-9]*" autocomplete="off" placeholder="------">
         <button class="primary" id="btnPrApply" type="button" style="width:100%">Set new Admin PIN</button>
       </div>
       <div class="adm-msg" id="prMsg" style="text-align:center"></div>
@@ -438,8 +438,8 @@
         <div id="secStep2" style="display:none;margin-top:12px">
           <label>6-digit code from the email</label><input id="secCode" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000">
           <div class="row">
-            <div><label>New Admin PIN (6 digits)</label><input id="secPin1" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></div>
-            <div><label>Confirm new Admin PIN</label><input id="secPin2" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></div>
+            <div><label>New Admin PIN (6 digits)</label><input id="secPin1" type="password" inputmode="numeric" maxlength="6" pattern="[0-9]*" autocomplete="off"></div>
+            <div><label>Confirm new Admin PIN</label><input id="secPin2" type="password" inputmode="numeric" maxlength="6" pattern="[0-9]*" autocomplete="off"></div>
           </div>
           <div class="adm-actions"><button class="primary" id="btnSecApply" type="button">Change Admin PIN</button></div>
         </div>
@@ -472,8 +472,8 @@
     </div>
 
     <h2>Billed To</h2>
-    <label>Guest Name *</label><input id="name" required>
-    <label>Contact # *</label><input id="contact" type="tel" required>
+    <label id="lbl_name">Guest Name *</label><input id="name">
+    <label id="lbl_contact">Contact # *</label><input id="contact" type="tel">
     <label>Address</label><input id="address">
 
     <h2>Booking Details</h2>
@@ -482,7 +482,7 @@
       <div><label id="lbl_downPayment">Down Payment</label><input id="downPayment" type="number" min="0" step="0.01"></div>
     </div>
     <label id="lbl_balance">Balance (auto)</label><input id="balance" readonly>
-    <label>Mode of Payment</label>
+    <label id="lbl_mode">Mode of Payment *</label>
     <select id="mode">
       <option value="">Select...</option>
 
@@ -492,9 +492,9 @@
       <input type="file" id="proofFile" accept="image/*">
       <img id="proofPrev" alt="Receipt preview">
     </div>
-    <label>Reservation Date *</label>
+    <label id="lbl_stayDate">Reservation Date *</label>
     <input type="date" id="stayDate">
-    <label>Booking Type *</label>
+    <label id="lbl_bookType">Booking Type *</label>
     <select id="bookType">
       <option value="">Select a booking type...</option>
       <option value="day">Day Tour (8:00 AM to 5:00 PM)</option>
@@ -522,8 +522,8 @@
     <div class="fee-total" id="feeTotal"></div>
     <input type="hidden" id="additionalFees"><input type="hidden" id="feesDetail">
     <div id="agentWrap">
-    <label>Referred by Agent? *</label>
-    <div class="radios">
+    <label id="lbl_referred">Referred by Agent? *</label>
+    <div class="radios" id="referredRadios">
       <label class="rd"><input type="radio" name="referred" value="Yes"> Yes</label>
       <label class="rd"><input type="radio" name="referred" value="No" checked> No</label>
     </div>
@@ -626,8 +626,8 @@
       <button class="ghost" id="btnFgSend" type="button" style="width:100%">Email me a code</button>
       <div id="fgStep2" style="display:none;margin-top:10px">
         <label>6-digit code</label><input id="fgCode" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000">
-        <label>New Admin PIN (6 digits)</label><input id="fgPin1" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
-        <label>Confirm new Admin PIN</label><input id="fgPin2" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+        <label>New Admin PIN (6 digits)</label><input id="fgPin1" type="password" inputmode="numeric" maxlength="6" pattern="[0-9]*" autocomplete="off">
+        <label>Confirm new Admin PIN</label><input id="fgPin2" type="password" inputmode="numeric" maxlength="6" pattern="[0-9]*" autocomplete="off">
         <button class="primary" id="btnFgApply" type="button" style="width:100%;margin-top:12px">Set new Admin PIN</button>
       </div>
       <div class="adm-msg" id="fgMsg"></div>
@@ -684,6 +684,7 @@
 
       <h2>Invoice numbering</h2><div class="row"><div><label for="re_invMode">Numbering for this resort</label><select id="re_invMode"><option>Random</option><option>Manual</option><option>Continuous</option></select></div><div><label for="re_invPrefix">Resort prefix (optional)</label><input id="re_invPrefix" maxlength="12" placeholder="Business prefix"></div></div><label for="re_invNext">Next continuous number</label><input id="re_invNext" type="number" min="1" max="99999999" step="1" value="1"><p class="hint">Continuous numbers are allocated when you save. A distinct prefix for each resort keeps its sequence independent. Existing bookings keep their invoice number.</p>
       <h2>Fields on booking confirmations</h2><p class="hint">Choose fields to show on this resort's preview and downloaded confirmation. Records keep all fields.</p><div id="re_visibleFields" class="field-options"></div>
+      <h2>Required booking fields</h2><p class="hint">Ticked fields must be filled in before a booking can be saved. Untick a field to make it optional for this resort. Invoice No. is only typed (and only required) when this resort's numbering is Manual.</p><div id="re_requiredFields" class="field-options"></div>
       <h2>Custom booking fields</h2><p class="hint">Enable each field for this resort's booking form and confirmation, then customize its label. Choose its position in the booking details table below. Values are optional and saved with the booking.</p>
       <div id="re_customFields"></div>
       <label class="custom-hide-empty"><input type="checkbox" id="re_customHideEmpty"> Automatically hide empty custom fields on confirmations</label>
@@ -931,7 +932,7 @@
   </div>
 </div>
 
-<script src="app.js?v=01fe252449"></script>
+<script src="app.js?v=72ffc4531b"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

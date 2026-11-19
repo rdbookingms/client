@@ -297,7 +297,12 @@
   function labelFor(k, def) { return CUSTOM_FIELD_KEYS.indexOf(k) >= 0 ? customFieldConfig(RC())[k].label : RC().labels[k] || def; }
   function applyResortUI() {
     var c = RC(), L = c.labels;
-    $('lbl_invoice').textContent = L.invoiceNo + (c.invoiceMode === 'Manual' ? ' *' : '');
+    $('lbl_invoice').textContent = L.invoiceNo + (c.invoiceMode === 'Manual' && isRequired('invoiceNo', c) ? ' *' : '');
+    $('lbl_dpDate').textContent = 'Down Payment Date' + reqStar('dpDate', c);
+    $('lbl_name').textContent = 'Guest Name' + reqStar('name', c); $('lbl_contact').textContent = 'Contact #' + reqStar('contact', c);
+    $('lbl_mode').textContent = 'Mode of Payment' + reqStar('mode', c);
+    $('lbl_stayDate').textContent = 'Reservation Date' + reqStar('stayDate', c); $('lbl_bookType').textContent = 'Booking Type' + reqStar('bookType', c);
+    $('lbl_referred').textContent = 'Referred by Agent?' + reqStar('referred', c);
     // Invoice No. can be typed only when this resort's numbering is Manual (and never while editing a saved booking).
     // Random / Continuous: fully disabled (no click, focus or typing). A saved booking's number is read-only in every mode.
     var invAuto = c.invoiceMode !== 'Manual', invLocked = !!editing || invAuto;
@@ -309,12 +314,12 @@
       : editing ? 'The invoice number of a saved booking cannot be changed.' : '';
     $('invoiceNo').title = '';
     $('invoiceNo').placeholder = c.invoiceMode === 'Manual' ? 'Enter invoice number' : 'Assigned when saved';
-    $('lbl_bookingFee').textContent = L.bookingFee + ' (' + CUR + ') *';
-    $('lbl_downPayment').textContent = L.downPayment + ' (' + CUR + ')';
+    $('lbl_bookingFee').textContent = L.bookingFee + ' (' + CUR + ')' + reqStar('bookingFee', c);
+    $('lbl_downPayment').textContent = L.downPayment + ' (' + CUR + ')' + reqStar('downPayment', c);
     $('lbl_balance').textContent = 'Balance (auto: ' + L.bookingFee.toLowerCase() + ' + additional fees - ' + L.downPayment.toLowerCase() + ')';
-    $('lbl_checkIn').textContent = L.checkIn + ' *';
-    $('lbl_checkOut').textContent = L.checkOut + ' *';
-    $('lbl_pax').textContent = L.pax;
+    $('lbl_checkIn').textContent = L.checkIn + reqStar('checkIn', c);
+    $('lbl_checkOut').textContent = L.checkOut + reqStar('checkOut', c);
+    $('lbl_pax').textContent = L.pax + reqStar('pax', c);
     $('lbl_marketer').textContent = L.marketer;
     applyCustomFormVisibility();
   }
@@ -791,6 +796,7 @@
     var t = new Date(); $('dpDate').value = t.getFullYear() + '-' + ('0'+(t.getMonth()+1)).slice(-2) + '-' + ('0'+t.getDate()).slice(-2);
     update(); fitPreview(); setStatus('');
     applyResortUI(); invoiceRequest++;
+    if (isRequired('referred')) clearReferred();                    // required: the user must answer Yes or No
   }
 
   /* ---------- image export ---------- */
@@ -1176,26 +1182,46 @@
       var g = t.closest && t.closest('.group-missing'); if (g) g.classList.remove('group-missing');
     }, true);
   });
+  /* New Admin PIN fields accept digits only (letters and symbols are removed as they are typed or pasted). */
+  ['secPin1', 'secPin2', 'fgPin1', 'fgPin2', 'prPin1', 'prPin2'].forEach(function (id) {
+    var el = $(id); if (!el) return;
+    el.addEventListener('input', function () { var v = el.value.replace(/\D/g, '').slice(0, 6); if (v !== el.value) el.value = v; });
+  });
+
+  /* Per-resort required fields (Admin Settings > resort > Required booking fields). A resort stores only the fields it made
+   * optional, so every field below is required unless that resort unticked it. Invoice No. counts only with Manual numbering. */
+  var REQUIRED_FIELDS = { invoiceNo: 'Invoice No. (Manual numbering only)', dpDate: 'Down Payment Date', name: 'Guest Name', contact: 'Contact #',
+    bookingFee: 'Booking Fee', downPayment: 'Down Payment', mode: 'Mode of Payment', stayDate: 'Reservation Date', bookType: 'Booking Type',
+    checkIn: 'Check-In', checkOut: 'Check-Out', pax: '# of Pax', referred: 'Referred by Agent' };
+  function isRequired(key, c) { c = c || RC(); return (c.optional || []).indexOf(key) < 0; }
+  function reqStar(key, c) { return isRequired(key, c) ? ' *' : ''; }
+  function clearReferred() { [].forEach.call(document.querySelectorAll('input[name=referred]'), function (r) { r.checked = false; }); }
   function validate() {
     var missing = [], bad = [];
-    var L = RC().labels;
+    var c = RC(), L = c.labels;
     function need(isMissing, label, id) { if (isMissing) { missing.push(label); if (id) bad.push(id); } }
-    need(RC().invoiceMode === 'Manual' && !$('invoiceNo').value.trim(), L.invoiceNo, 'invoiceNo');
-    need(!$('name').value.trim(), 'Guest Name', 'name');
-    need(!$('contact').value.trim(), 'Contact #', 'contact');
-    need($('bookingFee').value === '', L.bookingFee, 'bookingFee');
-    if (referredVal() === 'Yes') {
+    function req(key) { return isRequired(key, c); }
+    need(req('invoiceNo') && c.invoiceMode === 'Manual' && !$('invoiceNo').value.trim(), L.invoiceNo, 'invoiceNo');
+    need(req('dpDate') && !$('dpDate').value, 'Down Payment Date', 'dpDate');
+    need(req('name') && !$('name').value.trim(), 'Guest Name', 'name');
+    need(req('contact') && !$('contact').value.trim(), 'Contact #', 'contact');
+    need(req('bookingFee') && $('bookingFee').value === '', L.bookingFee, 'bookingFee');
+    need(req('downPayment') && $('downPayment').value === '', L.downPayment, 'downPayment');
+    need(req('mode') && !$('mode').value, 'Mode of Payment', 'mode');
+    need(req('stayDate') && !$('stayDate').value, 'Reservation Date', 'stayDate');
+    need(req('bookType') && !$('bookType').value, 'Booking Type', 'bookType');
+    need(req('checkIn') && !$('checkIn').value, L.checkIn, 'checkIn');
+    need(req('checkOut') && !$('checkOut').value, L.checkOut, 'checkOut');
+    need(req('pax') && $('pax').value === '', L.pax, 'pax');
+    need(req('referred') && !document.querySelector('input[name=referred]:checked'), 'Referred by Agent (Yes or No)', 'referredRadios');
+    if (referredVal() === 'Yes') {                                  // an agent always needs a name and a percentage
       need(!$('marketer').value.trim(), 'Agent name', 'marketer');
       var pc = document.querySelector('input[name=agentPct]:checked');
       need(pctVal() === '' || !(pctVal() >= 0 && pctVal() <= 100), 'Agent percentage (0 to 100)', pc && pc.value === 'other' ? 'agentPctOther' : 'pctRadios');
     }
-    need(!$('stayDate').value, 'Reservation Date', 'stayDate');
-    need(!$('bookType').value, 'Booking Type', 'bookType');
-    if ($('bookType').value === 'custom') {
-      need(!$('checkIn').value, L.checkIn, 'checkIn');
-      need(!$('checkOut').value, L.checkOut, 'checkOut');
-    }
     need(!!($('checkIn').value && $('checkOut').value && $('checkOut').value <= $('checkIn').value), 'a ' + L.checkOut + ' later than the ' + L.checkIn, 'checkOut');
+    var fee = $('bookingFee').value, dp = $('downPayment').value;             // the down payment cannot be more than the booking fee
+    need(fee !== '' && dp !== '' && Number(dp) > Number(fee) + 0.004, 'a ' + L.downPayment + ' that is not more than the ' + L.bookingFee, 'downPayment');
     markMissing(bad);
     return missing;
   }
@@ -2015,6 +2041,7 @@
     $('re_termsHead').value = d.termsHeading; $('re_terms').value = d.terms; $('re_notes').value = d.notes; $('re_deposit').value = d.deposit;
     $('re_excl').value = d.exclHeading; $('re_thanks').value = d.thanks; $('re_sigL').value = d.sigLeft; $('re_sigR').value = d.sigRight;
     $('re_invMode').value = d.invoiceMode || 'Random'; $('re_invPrefix').value = d.invoicePrefix || ''; $('re_invNext').value = d.invoiceNext || 1;
+    $('re_requiredFields').innerHTML = Object.keys(REQUIRED_FIELDS).map(function(k){return '<label><input type="checkbox" data-re-required="' + k + '"' + ((d.optional || []).indexOf(k) < 0 ? ' checked' : '') + '>' + esc(REQUIRED_FIELDS[k]) + '</label>';}).join('');
     $('re_visibleFields').innerHTML = Object.keys(RECEIPT_FIELDS).map(function(k){return '<label><input type="checkbox" data-re-field="' + k + '"' + ((d.hide || []).indexOf(k) < 0 ? ' checked' : '') + '>' + esc(RECEIPT_FIELDS[k]) + '</label>';}).join('');
     var custom = customFieldConfig(d);
     $('re_customFields').innerHTML = CUSTOM_FIELD_KEYS.map(function(key){return '<div class="custom-field-setting"><label><input type="checkbox" data-custom-visible="' + key + '"' + (custom[key].visible?' checked':'') + '> ' + esc(CUSTOM_FIELD_LABELS[key]) + '</label><div><label for="custom_label_' + key + '">Display label</label><input id="custom_label_' + key + '" data-custom-label="' + key + '" maxlength="60" value="' + attr(custom[key].label) + '"></div></div>';}).join('');
@@ -2103,6 +2130,7 @@
       customFields:custom,
       invoiceMode: $('re_invMode').value, invoicePrefix: $('re_invPrefix').value.trim(), invoiceNext: Number($('re_invNext').value),
       hide: Array.prototype.filter.call(document.querySelectorAll('[data-re-field]'), function(el){return !el.checked;}).map(function(el){return el.getAttribute('data-re-field');}),
+      optional: Array.prototype.filter.call(document.querySelectorAll('[data-re-required]'), function(el){return !el.checked;}).map(function(el){return el.getAttribute('data-re-required');}),
       name: name, active: $('re_active').checked, style: $('re_style').value, headerName: $('re_header').value.trim() || name, title: $('re_title').value.trim(),
       contactPerson: $('re_person').value.trim(), phone: $('re_phone').value.trim(), address: $('re_address').value.trim(), web: $('re_web').value.trim(),
       c1: $('re_c1').value, c2: $('re_c2').value, terms: $('re_terms').value, notes: $('re_notes').value, deposit: $('re_deposit').value.trim(),

@@ -2714,6 +2714,7 @@
     loadPinCalendar();
   }
   function lockApp(msg, deferPin) {
+    clearSession_();                                  // signing out / session ended: forget it on this device too
     TOKEN = ''; ADMIN_TOKEN = '';
     pinAttemptSeq++; pinChecking = false; saving = false; editing = null; savedInvoice = '';
     ['btnUnlock','btnAdmGo','btnAdmin'].forEach(function(id){setBusy($(id),false);});
@@ -2745,6 +2746,7 @@
     $('pinScreen').style.display = 'none';
     startApp(bootstrap);
     showScreen('menu');
+    saveSession_();                                   // stay signed in on this device (see PHONE APP below)
   }
   function startApp(bootstrap) {
     CFG_READY = false;
@@ -3190,7 +3192,7 @@
     licMode = '';
     $('licScreen').style.display = 'none';
     renderSub(LIC);
-    if (!TOKEN) showPin();
+    if (!TOKEN && !resumeSession_()) showPin();      // reopening the app: continue the saved session if it is still valid
   }
   function bootLicense(force) {
     licMode = ''; licMsg('');
@@ -3579,6 +3581,85 @@
   $('pcPrev').onclick = function(){pcDate.setMonth(pcDate.getMonth()-1); loadPinCalendar();}; $('pcNext').onclick = function(){pcDate.setMonth(pcDate.getMonth()+1); loadPinCalendar();}; $('pcResort').onchange = loadPinCalendar; $('pcRefresh').onclick = loadPinCalendar;
   $('pcToday').onclick = function(){ var now = new Date(); pcDate = new Date(now.getFullYear(), now.getMonth(), 1); loadPinCalendar(); };
   $('pcDownload').onclick = function(){ if (pcModel && !pcLoading) drawCalendarImage(null,pcModel); };
+  /* ---------- PHONE APP: stay signed in + Back button ----------
+   * Stay signed in: after the PIN, this device keeps the session (with its license key) in localStorage, so closing
+   * and reopening the app (or the phone clearing it from memory) continues where it was. The server still decides:
+   * a session ends after SESSION_SECONDS without use (6 hours in Code.gs) and then the PIN is asked again.
+   * Lock, an expired session or another license key removes it. Provider dashboards are never kept.
+   * Back button / back gesture: closes the open pop-up (with its own Cancel/Close button), then returns from a screen
+   * to the menu (the booking form asks first when it has unsaved changes), then "Press back again to exit".
+   * Keep this block when updating Index.html. */
+  var SESSION_STORE_KEY = 'bk_session', SESSION_KEEP_DAYS = 7;
+  function saveSession_() {
+    setTimeout(function () {
+      try { if (TOKEN && TOKEN !== 'dev' && !PROVIDER && LKEY) localStorage.setItem(SESSION_STORE_KEY, JSON.stringify({ t: TOKEN, k: LKEY, at: Date.now() })); } catch (e) {}
+    }, 0);
+  }
+  function clearSession_() { try { localStorage.removeItem(SESSION_STORE_KEY); } catch (e) {} }
+  function resumeSession_() {
+    try {
+      if (TOKEN || PROVIDER || /[?&]admin=/.test(location.search)) return false;
+      var s = JSON.parse(localStorage.getItem(SESSION_STORE_KEY) || 'null');
+      if (!s || !s.t || s.k !== LKEY || Date.now() - Number(s.at || 0) > SESSION_KEEP_DAYS * 86400000) { clearSession_(); return false; }
+      unlock(String(s.t));                            // the server checks it: if it has ended, the PIN screen comes back
+      return true;
+    } catch (e) { return false; }
+  }
+  document.addEventListener('visibilitychange', function () {       // keep the "last used" time fresh while the app is in use
+    if (document.visibilityState === 'hidden' && TOKEN) saveSession_();
+  });
+
+  var BACK_CLOSERS = { modalBg: 'btnClose', calBg: 'btnCalClose', qdBg: 'btnQdClose', admBg: 'btnAdmCancel', resEdBg: 'btnResCancel',
+    prevBg: 'btnPrevClose', cancelBg: 'btnCancelNo', payBg: 'btnPayX', resLimBg: 'btnResLimNo', delResBg: 'btnDelResNo', exBg: 'btnExCancel',
+    exPhBg: 'btnExPhClose', exDelBg: 'btnExDelNo', delBkBg: 'btnDelBkNo', alBg: 'btnAlClose', stlBg: 'btnStlNo', subBg: 'btnSubX',
+    leaveBg: 'btnStay', confirmBg: 'btnKeep', editBg: 'btnBackEdit' };
+  function isShown_(el) { return !!el && el.style.display !== 'none' && getComputedStyle(el).display !== 'none'; }
+  function topPopup_() {
+    var best = null, bestZ = -1, all = document.querySelectorAll('[id$="Bg"]');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i]; if (!BACK_CLOSERS[el.id] || !isShown_(el)) continue;
+      var z = parseInt(getComputedStyle(el).zIndex, 10) || 0;
+      if (z >= bestZ) { best = el; bestZ = z; }                      // highest layer; later in the page wins a tie
+    }
+    return best;
+  }
+  function handleBack_() {                                          // true = Back was used inside the app
+    var p = topPopup_();
+    if (p) { var b = $(BACK_CLOSERS[p.id]); if (b) { if (!b.disabled) b.click(); } else p.style.display = 'none'; return true; }
+    if (isShown_($('licScreen')) || isShown_($('pinScreen'))) return false;
+    if (isShown_($('app'))) { leaveForm(); return true; }
+    if (isShown_($('reportScreen'))) { $('btnRepBack').click(); return true; }
+    if (isShown_($('expenseScreen'))) { $('btnExBack').click(); return true; }
+    if (isShown_($('adminScreen'))) { $('btnAdmBack').click(); return true; }
+    return false;                                                   // main menu
+  }
+  var backGuard = false, backToastTimer = null;
+  function pushBackGuard_() { try { history.pushState({ rdGuard: true }, ''); backGuard = true; } catch (e) {} }
+  function backToast_(msg) {
+    var t = $('backToast');
+    if (!t) {
+      t = document.createElement('div'); t.id = 'backToast'; t.setAttribute('role', 'status');
+      t.style.cssText = 'position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:rgba(23,51,58,.94);color:#fff;' +
+        'padding:10px 18px;border-radius:22px;font:500 14px/1.3 Inter,Arial,sans-serif;z-index:2147483600;pointer-events:none;opacity:0;transition:opacity .2s;max-width:86vw;text-align:center';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg; t.style.opacity = '1';
+    clearTimeout(backToastTimer); backToastTimer = setTimeout(function () { t.style.opacity = '0'; }, 2200);
+  }
+  try {
+    if (history.state && history.state.rdGuard) backGuard = true;
+    else { history.replaceState({ rdBase: true }, ''); pushBackGuard_(); }
+    window.addEventListener('popstate', function () {
+      backGuard = false;
+      var handled = false; try { handled = handleBack_(); } catch (e) { handled = false; }
+      if (handled) { pushBackGuard_(); return; }
+      backToast_('Press back again to exit');                      // the next Back leaves the app
+    });
+    ['pointerdown', 'keydown'].forEach(function (ev) {               // used the app again after the hint: Back works in the app again
+      document.addEventListener(ev, function () { if (!backGuard) pushBackGuard_(); }, true);
+    });
+  } catch (e) {}
+
   if (window.google && google.script) {
     // Client links select the business and still require its PIN. Provider tickets are a separate, one-time bypass.
     var booted = false, boot = function(){ if (!booted) { booted = true; bootLicense(false); } };

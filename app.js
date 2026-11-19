@@ -299,11 +299,15 @@
     var c = RC(), L = c.labels;
     $('lbl_invoice').textContent = L.invoiceNo + (c.invoiceMode === 'Manual' ? ' *' : '');
     // Invoice No. can be typed only when this resort's numbering is Manual (and never while editing a saved booking).
-    var invLocked = !!editing || c.invoiceMode !== 'Manual';
+    // Random / Continuous: fully disabled (no click, focus or typing). A saved booking's number is read-only in every mode.
+    var invAuto = c.invoiceMode !== 'Manual', invLocked = !!editing || invAuto;
+    $('invoiceNo').disabled = invAuto;
     $('invoiceNo').readOnly = invLocked;
     $('invoiceNo').classList.toggle('auto', invLocked);
-    $('invoiceNo').title = editing ? 'The invoice number of a saved booking cannot be changed.'
-      : invLocked ? 'Assigned automatically (' + (c.invoiceMode || 'Random') + ' numbering). To type invoice numbers yourself, set this resort\'s numbering to Manual in Admin Settings.' : '';
+    $('invWrap').classList.toggle('inv-locked', invAuto);
+    $('invWrap').title = invAuto ? 'Assigned automatically (' + (c.invoiceMode || 'Random') + ' numbering). To type invoice numbers yourself, set this resort\'s numbering to Manual in Admin Settings.'
+      : editing ? 'The invoice number of a saved booking cannot be changed.' : '';
+    $('invoiceNo').title = '';
     $('invoiceNo').placeholder = c.invoiceMode === 'Manual' ? 'Enter invoice number' : 'Assigned when saved';
     $('lbl_bookingFee').textContent = L.bookingFee + ' (' + CUR + ') *';
     $('lbl_downPayment').textContent = L.downPayment + ' (' + CUR + ')';
@@ -781,7 +785,7 @@
     FIELDS.forEach(function(f){ $(f).value = ''; });
     $('stayDate').value = ''; $('bookType').value = ''; applyBookType(false);
     setReferred('No'); setPct(CFG.settings.agentDefault);
-    editing = null; $('invoiceNo').readOnly = false; applyEditUI();
+    editing = null; $('invoiceNo').readOnly = false; applyEditUI(); markMissing([]);
     renderFeeList(currentFees(), {});
     clearProof(); toggleProof(); checkConflict(); savedInvoice = ''; showInvNotice('');
     var t = new Date(); $('dpDate').value = t.getFullYear() + '-' + ('0'+(t.getMonth()+1)).slice(-2) + '-' + ('0'+t.getDate()).slice(-2);
@@ -1150,24 +1154,49 @@
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 
+  /* Required fields: validate() runs when Save / Review changes is pressed. Every empty required field is outlined in red
+   * (the agent percentage choice as a group) and the page scrolls to the first one; an outline clears once that field changes. */
+  function markMissing(ids) {
+    [].forEach.call(document.querySelectorAll('.field-missing, .group-missing'), function (el) {
+      el.classList.remove('field-missing', 'group-missing'); el.removeAttribute('aria-invalid');
+    });
+    var first = null;
+    ids.forEach(function (id) {
+      var el = $(id); if (!el) return;
+      if (/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) { el.classList.add('field-missing'); el.setAttribute('aria-invalid', 'true'); }
+      else el.classList.add('group-missing');
+      if (!first) first = el;
+    });
+    if (first) { try { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { first.scrollIntoView(); } }
+  }
+  ['input', 'change'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      var t = e.target; if (!t || !t.classList) return;
+      if (t.classList.contains('field-missing')) { t.classList.remove('field-missing'); t.removeAttribute('aria-invalid'); }
+      var g = t.closest && t.closest('.group-missing'); if (g) g.classList.remove('group-missing');
+    }, true);
+  });
   function validate() {
-    var missing = [];
+    var missing = [], bad = [];
     var L = RC().labels;
-    if (RC().invoiceMode === 'Manual' && !$('invoiceNo').value.trim()) missing.push(L.invoiceNo);
-    if (!$('name').value.trim()) missing.push('Guest Name');
-    if (!$('contact').value.trim()) missing.push('Contact #');
-    if ($('bookingFee').value === '') missing.push(L.bookingFee);
+    function need(isMissing, label, id) { if (isMissing) { missing.push(label); if (id) bad.push(id); } }
+    need(RC().invoiceMode === 'Manual' && !$('invoiceNo').value.trim(), L.invoiceNo, 'invoiceNo');
+    need(!$('name').value.trim(), 'Guest Name', 'name');
+    need(!$('contact').value.trim(), 'Contact #', 'contact');
+    need($('bookingFee').value === '', L.bookingFee, 'bookingFee');
     if (referredVal() === 'Yes') {
-      if (!$('marketer').value.trim()) missing.push('Agent name');
-      if (pctVal() === '' || !(pctVal() >= 0 && pctVal() <= 100)) missing.push('Agent percentage (0 to 100)');
+      need(!$('marketer').value.trim(), 'Agent name', 'marketer');
+      var pc = document.querySelector('input[name=agentPct]:checked');
+      need(pctVal() === '' || !(pctVal() >= 0 && pctVal() <= 100), 'Agent percentage (0 to 100)', pc && pc.value === 'other' ? 'agentPctOther' : 'pctRadios');
     }
-    if (!$('stayDate').value) missing.push('Reservation Date');
-    if (!$('bookType').value) missing.push('Booking Type');
-    else if ($('bookType').value === 'custom') {
-      if (!$('checkIn').value) missing.push(L.checkIn);
-      if (!$('checkOut').value) missing.push(L.checkOut);
+    need(!$('stayDate').value, 'Reservation Date', 'stayDate');
+    need(!$('bookType').value, 'Booking Type', 'bookType');
+    if ($('bookType').value === 'custom') {
+      need(!$('checkIn').value, L.checkIn, 'checkIn');
+      need(!$('checkOut').value, L.checkOut, 'checkOut');
     }
-    if ($('checkIn').value && $('checkOut').value && $('checkOut').value <= $('checkIn').value) missing.push('a ' + L.checkOut + ' later than the ' + L.checkIn);
+    need(!!($('checkIn').value && $('checkOut').value && $('checkOut').value <= $('checkIn').value), 'a ' + L.checkOut + ' later than the ' + L.checkIn, 'checkOut');
+    markMissing(bad);
     return missing;
   }
   function collectData(isUpdate) {
@@ -1302,7 +1331,8 @@
         renderFeeList(feesFor(d.resort), parseDetail(d.feesDetail));
         setReferred(d.referred === 'Yes' ? 'Yes' : 'No'); setPct(d.agentPct === '' ? CFG.settings.agentDefault : d.agentPct);
         clearProof(); toggleProof(); showInvNotice('');
-        $('invoiceNo').readOnly = true; $('invoiceNo').classList.add('auto'); $('invoiceNo').title = 'The invoice number of a saved booking cannot be changed.';
+        $('invoiceNo').readOnly = true; $('invoiceNo').classList.add('auto'); markMissing([]);
+        if (!$('invoiceNo').disabled) $('invWrap').title = 'The invoice number of a saved booking cannot be changed.';
         var inf = inferType($('checkIn').value, $('checkOut').value);
         $('stayDate').value = $('checkIn').value.slice(0, 10);
         $('bookType').value = d.bookType || inf.type;

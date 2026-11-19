@@ -90,6 +90,13 @@
   /* ---------- RECEIPT (fixed 800px wide, exported as image) ---------- */
   .receipt { width:800px; background:#fff; font-family:'Inter',Arial,sans-serif; color:#14262b; position:relative; overflow:hidden; }
   input.auto { background:#eef3f4; color:#47616b; }
+  /* Invoice No. with Random / Continuous numbering: disabled, cannot be clicked or focused (see applyResortUI) */
+  .inv-locked { cursor:not-allowed; }
+  .inv-locked #invoiceNo, #invoiceNo:disabled { pointer-events:none; }
+  #invoiceNo:disabled { opacity:1; color:#47616b; -webkit-text-fill-color:#47616b; }
+  /* Required fields left empty when saving (see validate) */
+  input.field-missing, select.field-missing, textarea.field-missing { border-color:#d93025; outline:2px solid #d93025; outline-offset:0; background:#fff7f6; }
+  .group-missing { outline:2px solid #d93025; outline-offset:4px; border-radius:8px; }
   .typehint { font-size:12px; color:var(--muted); margin-top:5px; min-height:0; }
   .modal.cal { max-width:580px; }
   .cal-head { display:flex; align-items:center; gap:8px; padding:12px 18px 0; flex-wrap:wrap; }

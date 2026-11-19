@@ -298,7 +298,12 @@
   function applyResortUI() {
     var c = RC(), L = c.labels;
     $('lbl_invoice').textContent = L.invoiceNo + (c.invoiceMode === 'Manual' ? ' *' : '');
-    $('invoiceNo').readOnly = !!editing || c.invoiceMode === 'Continuous';
+    // Invoice No. can be typed only when this resort's numbering is Manual (and never while editing a saved booking).
+    var invLocked = !!editing || c.invoiceMode !== 'Manual';
+    $('invoiceNo').readOnly = invLocked;
+    $('invoiceNo').classList.toggle('auto', invLocked);
+    $('invoiceNo').title = editing ? 'The invoice number of a saved booking cannot be changed.'
+      : invLocked ? 'Assigned automatically (' + (c.invoiceMode || 'Random') + ' numbering). To type invoice numbers yourself, set this resort\'s numbering to Manual in Admin Settings.' : '';
     $('invoiceNo').placeholder = c.invoiceMode === 'Manual' ? 'Enter invoice number' : 'Assigned when saved';
     $('lbl_bookingFee').textContent = L.bookingFee + ' (' + CUR + ') *';
     $('lbl_downPayment').textContent = L.downPayment + ' (' + CUR + ')';
@@ -1297,7 +1302,7 @@
         renderFeeList(feesFor(d.resort), parseDetail(d.feesDetail));
         setReferred(d.referred === 'Yes' ? 'Yes' : 'No'); setPct(d.agentPct === '' ? CFG.settings.agentDefault : d.agentPct);
         clearProof(); toggleProof(); showInvNotice('');
-        $('invoiceNo').readOnly = true;
+        $('invoiceNo').readOnly = true; $('invoiceNo').classList.add('auto'); $('invoiceNo').title = 'The invoice number of a saved booking cannot be changed.';
         var inf = inferType($('checkIn').value, $('checkOut').value);
         $('stayDate').value = $('checkIn').value.slice(0, 10);
         $('bookType').value = d.bookType || inf.type;

@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=61757d3c7c">
+<link rel="stylesheet" href="app.css?v=d7c30a0734">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -200,7 +200,7 @@
     <div class="pc-tools"><select id="pcResort" aria-label="Resort"></select><button id="pcPrev" type="button" aria-label="Previous month">‹</button><strong id="pcMonth"></strong><button id="pcNext" type="button" aria-label="Next month">›</button><button id="pcToday" type="button">Today</button><button id="pcRefresh" type="button">Refresh</button><button id="pcDownload" type="button" disabled>Download image</button></div>
     <div id="pcStatus" role="status" aria-live="polite">Loading calendar…</div>
     <div id="pcGrid" class="cal-grid"></div>
-    <div class="cal-legend" id="pcLegend" hidden><div id="pcKey"></div>Each date reads like a clock along the diagonal: <b>upper-left</b> = 12:00 AM – 11:59 AM, <b>lower-right</b> = 12:00 PM – 11:59 PM. Only the booked hours are shaded. Numbered guests identify bookings without revealing names. Tap a date to see its booked times.</div>
+    <div class="cal-legend" id="pcLegend" hidden><div id="pcKey"></div>Each date is split in two: <b>upper-left = AM</b>, <b>lower-right = PM</b>. Custom bookings shade only their booked hours; stripes mean two bookings share a half. G# numbers identify bookings without revealing names. Tap a date to see its booked times.</div>
   </section>
   <div class="pin-card">
     <div class="pin-lock">&#128274;</div>
@@ -586,9 +586,9 @@
     <div class="list" style="padding:0 0 4px"><div class="cal-grid" id="calGrid"></div></div>
     <div class="cal-legend">
       <div id="calKey"></div>
-      Each date box reads like a clock along the diagonal: the <b>upper-left</b> half is <b>12:00 AM – 11:59 AM</b> and the <b>lower-right</b> half is <b>12:00 PM – 11:59 PM</b> (the line is noon).
-      Only the booked hours are shaded; blank parts are available.
-      Guest numbers follow the check-in order for the month shown. <b>Tap a date</b> to see its bookings.
+      Each date box is split in two: <b>upper-left = AM</b>, <b>lower-right = PM</b>. Day Tour fills AM, Overnight fills PM, 22 Hours (Morning) fills the whole date,
+      and 22 Hours (Evening) fills PM on check-in and AM on check-out. Custom shades only its booked hours. Stripes mean two bookings share a half.
+      G# = guest number in check-in order for the month. <b>Tap a date</b> to see its bookings.
     </div>
   </div>
 </div>
@@ -941,7 +941,7 @@
   </div>
 </div>
 
-<script src="app.js?v=903038807d"></script>
+<script src="app.js?v=8d06ee5532"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

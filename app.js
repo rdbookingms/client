@@ -1062,7 +1062,7 @@
     var days = new Date(y, m + 1, 0).getDate(), byDs = {}, cells = [], gn = 0;
     for (var d = 1; d <= days; d++) { var k = dstr(y, m, d); byDs[k] = {d:d, ds:k, U:[], L:[], bands:[], lab:{U:[], L:[], C:[]}, list:[]}; }
     function put(ds, h, b) { if (byDs[ds]) byDs[ds][h].push(b.type); }
-    function lab(ds, h, b, t, nd) { if (byDs[ds]) byDs[ds].lab[h].push({guest:b.guest, type:b.type, t:t, nd:!!nd}); }
+    function lab(ds, h, b, t, nd, t2) { if (byDs[ds]) byDs[ds].lab[h].push({guest:b.guest, type:b.type, t:t, t2:t2 || '', nd:!!nd}); }
     bks.forEach(function(b){              // guest numbers follow check-in order for the bookings shown this month
       for (var d = 1; d <= days; d++) { if (dayHours_(b, dstr(y, m, d))) { b.guest = ++gn; break; } }
     });
@@ -1076,7 +1076,9 @@
         for (var ds = D; ds <= dstr(y, m, days) && pdate(ds + ' 00:00') < b.e; ds = addDays(ds, 1)) {
           var h = dayHours_(b, ds); if (!h || !byDs[ds]) continue;
           byDs[ds].bands.push({a:h[0], z:h[1], type:b.type, color:TYPE_COLORS[b.type]});
-          lab(ds, h[0] < 12 ? 'U' : 'L', b, fmtC(b.s) + '–' + fmtC(b.e));
+          // like 22 Hours (Evening): IN on the check-in date, OUT on the check-out date, 'All day' in between
+          var isIn = ds === D, isOut = h[1] < 24 || addDays(ds, 1) + ' 00:00' === b.checkOut.slice(0, 16);
+          lab(ds, h[0] < 12 ? 'U' : 'L', b, isIn ? 'IN: ' + fmtC(b.s) : (isOut ? 'OUT: ' + fmtC(b.e) : 'All day'), false, isIn && isOut ? 'OUT: ' + fmtC(b.e) : '');
         }
       }
     });
@@ -1122,7 +1124,7 @@
         if (!items.length) return '';
         return '<span class="ct ' + cls + '">' + items.map(function(x){
           var k = labCol_(x, striped), h = k.h, sh = '0 0 2px ' + h + ',0 0 2px ' + h + ',0 0 1px ' + h;
-          return '<span class="lb" style="color:' + k.c + ';text-shadow:' + sh + '"><b>G' + (x.guest || '?') + '</b>' + esc(x.t) + (x.nd ? ' <span class="nd">(next day)</span>' : '') + '</span>';
+          return '<span class="lb" style="color:' + k.c + ';text-shadow:' + sh + '"><b>G' + (x.guest || '?') + '</b>' + esc(x.t) + (x.nd ? ' <span class="nd">(next day)</span>' : '') + (x.t2 ? '<br>' + esc(x.t2) : '') + '</span>';
         }).join('') + '</span>';
       }
       var fU = fillCss_(c.U), fL = fillCss_(c.L), nh = c.numHalo;
@@ -1204,7 +1206,7 @@
       txt(String(c.d), x + 7, y + 20, 'left', '800 15px ' + F, c.numTxt, c.numHalo);
       function block(items, tx, ty, align, up, striped) {
         var lines = [];
-        items.forEach(function(it){ var k = labCol_(it, striped); lines.push(['G' + (it.guest || '?'), '800 13px ' + F, k]); lines.push([it.t + (it.nd ? ' (next day)' : ''), '600 12px ' + F, k]); });
+        items.forEach(function(it){ var k = labCol_(it, striped); lines.push(['G' + (it.guest || '?'), '800 13px ' + F, k]); lines.push([it.t + (it.nd ? ' (next day)' : ''), '600 12px ' + F, k]); if (it.t2) lines.push([it.t2, '600 12px ' + F, k]); });
         if (up) lines.reverse();
         lines.forEach(function(l, k){ txt(l[0], tx, ty + (up ? -k : k) * 16, align, l[1], l[2].c, l[2].h); });
       }
@@ -1226,7 +1228,7 @@
     g.font = '500 12.5px ' + F; g.fillStyle = '#5b6f75';
     g.fillText('Upper-left = AM, lower-right = PM. Day Tour fills AM; Overnight fills PM; 22 Hours (Morning) fills the whole date;', pad, ly + 30);
     g.fillText('22 Hours (Evening) fills PM on check-in and AM on check-out. Custom shades only its booked hours. Stripes = two bookings share a half.', pad, ly + 50);
-    g.fillText('Labels: G# = guest number (check-in order this month) with its times underneath; 22 Hours (Evening) shows IN on check-in and OUT on check-out.', pad, ly + 70);
+    g.fillText('Labels: G# = guest number (check-in order this month) with its times; 22 Hours (Evening) and Custom show IN on check-in and OUT on check-out.', pad, ly + 70);
     var a = document.createElement('a');
     a.download = 'Calendar_' + M.resort.replace(/[^a-z0-9]+/gi, '-') + '_' + M.y + '-' + pad2(M.m + 1) + '.png';
     a.href = cv.toDataURL('image/png');

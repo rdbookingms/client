@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=3055e9867c">
+<link rel="stylesheet" href="app.css?v=61757d3c7c">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -200,7 +200,7 @@
     <div class="pc-tools"><select id="pcResort" aria-label="Resort"></select><button id="pcPrev" type="button" aria-label="Previous month">‹</button><strong id="pcMonth"></strong><button id="pcNext" type="button" aria-label="Next month">›</button><button id="pcToday" type="button">Today</button><button id="pcRefresh" type="button">Refresh</button><button id="pcDownload" type="button" disabled>Download image</button></div>
     <div id="pcStatus" role="status" aria-live="polite">Loading calendar…</div>
     <div id="pcGrid" class="cal-grid"></div>
-    <div class="cal-legend" id="pcLegend" hidden><div id="pcKey"></div>Each date is split into <b>Day</b> (<span id="pcDayTxt"></span>) and <b>Overnight</b> (<span id="pcNightTxt"></span>) slots. Numbered guests identify bookings without revealing names. Unshaded slots have no recorded booking.</div>
+    <div class="cal-legend" id="pcLegend" hidden><div id="pcKey"></div>Each date reads like a clock along the diagonal: <b>upper-left</b> = 12:00 AM – 11:59 AM, <b>lower-right</b> = 12:00 PM – 11:59 PM. Only the booked hours are shaded. Numbered guests identify bookings without revealing names. Tap a date to see its booked times.</div>
   </section>
   <div class="pin-card">
     <div class="pin-lock">&#128274;</div>
@@ -586,13 +586,22 @@
     <div class="list" style="padding:0 0 4px"><div class="cal-grid" id="calGrid"></div></div>
     <div class="cal-legend">
       <div id="calKey"></div>
-      Each date box is split in two: the <b>upper-left</b> part is the <b>Day</b> slot (<span id="calDayTxt"></span>) and the <b>lower-right</b> part is the <b>Overnight</b> slot (<span id="calNightTxt"></span>).
-      Blank parts are available. Striped parts mean two bookings overlap.
-      Guest numbers follow the check-in order for the month shown.
+      Each date box reads like a clock along the diagonal: the <b>upper-left</b> half is <b>12:00 AM – 11:59 AM</b> and the <b>lower-right</b> half is <b>12:00 PM – 11:59 PM</b> (the line is noon).
+      Only the booked hours are shaded; blank parts are available.
+      Guest numbers follow the check-in order for the month shown. <b>Tap a date</b> to see its bookings.
     </div>
   </div>
 </div>
 
+<div class="modal-bg" id="dayBg" style="z-index:130">
+  <div class="modal day" role="dialog" aria-modal="true" aria-labelledby="dayTitle">
+    <header><h3 id="dayTitle">Day details</h3><button class="x" id="btnDayClose" type="button" aria-label="Close">&times;</button></header>
+    <div class="dd-sub" id="daySub"></div>
+    <div class="dd-bar" id="dayBar" aria-hidden="true"></div>
+    <div class="dd-ticks" aria-hidden="true"><span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>12 AM</span></div>
+    <div class="dd-list" id="dayList"></div>
+  </div>
+</div>
 <div class="modal-bg" id="qdBg">
   <div class="modal cal">
     <header><h3>Quick Date Check</h3><button class="x" id="btnQdClose" type="button">&times;</button></header>
@@ -932,7 +941,7 @@
   </div>
 </div>
 
-<script src="app.js?v=72ffc4531b"></script>
+<script src="app.js?v=903038807d"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

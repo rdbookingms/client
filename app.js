@@ -954,7 +954,6 @@
   }
   function dstr(y, m, d) { var x = new Date(y, m, d); return x.getFullYear() + '-' + pad2(x.getMonth() + 1) + '-' + pad2(x.getDate()); }
   function fillKey() {
-    $('calDayTxt').textContent = slotText('U'); $('calNightTxt').textContent = slotText('L');
     $('calKey').innerHTML = TYPE_KEYS.concat(['custom']).map(function(k){
       return '<span class="key"><i style="background:' + TYPE_COLORS[k] + '"></i>' + TYPE_LABELS[k] + '</span>';
     }).join('');
@@ -1016,43 +1015,72 @@
     var w = slotWin(ds, half, resort, times), ss = w[0], se = w[1];
     return fmtC(b.s > ss ? b.s : ss) + '-' + fmtC(b.e < se ? b.e : se);
   }
+  /* Time-proportional diagonal shading (Option 1, even spacing):
+   * a date box reads along its diagonal axis. Hour t of the day (0-24) is the line x + y = 200·t/24
+   * (x, y in % of the box), so 12:00 AM is the top-left corner, 12:00 PM the drawn diagonal and the next
+   * 12:00 AM the bottom-right corner. A booking shades only the band between its own hours on that date. */
+  function dayHours_(b, ds) {                               // the part of booking b on date ds, in hours [a, z] (0-24), or null
+    var p = ds.split('-').map(Number), d0 = new Date(p[0], p[1] - 1, p[2]), d1 = new Date(p[0], p[1] - 1, p[2] + 1);
+    if (!(b.s < d1 && b.e > d0)) return null;
+    var a = b.s > d0 ? (b.s - d0) / 3600000 : 0, z = b.e < d1 ? (b.e - d0) / 3600000 : 24;
+    a = Math.max(0, Math.min(24, a)); z = Math.max(0, Math.min(24, z));      // (daylight-saving days stay inside the box)
+    return z > a ? [a, z] : null;
+  }
+  function bandPoly_(a, z, W, H) {                         // the box (W x H) cut to hours a..z, as [[x,y],...]
+    var c1 = 200 * a / 24, c2 = 200 * z / 24;
+    var pts = [[0,0],[100,0],[100,100],[0,100]];
+    function clip(pts, keep, at) {                          // keep the side of the line x + y = at where keep(x + y) holds
+      var out = [];
+      for (var i = 0; i < pts.length; i++) {
+        var P = pts[i], Q = pts[(i + 1) % pts.length], pv = P[0] + P[1], qv = Q[0] + Q[1], pi = keep(pv), qi = keep(qv);
+        if (pi) out.push(P);
+        if (pi !== qi) { var t = (at - pv) / (qv - pv); out.push([P[0] + t * (Q[0] - P[0]), P[1] + t * (Q[1] - P[1])]); }
+      }
+      return out;
+    }
+    pts = clip(pts, function(v){ return v >= c1; }, c1);
+    pts = clip(pts, function(v){ return v <= c2; }, c2);
+    return pts.map(function(q){ return [q[0] * W / 100, q[1] * H / 100]; });
+  }
+  function hLabel_(b, ds, seg) {                           // short time text for booking b on date ds
+    if (b.checkIn.slice(0, 10) === ds) return fmtC(b.s) + '-' + fmtC(b.e);  // check-in day: the whole stay
+    return seg[1] < 24 ? 'Out ' + fmtC(b.e) : 'All day';
+  }
   function buildCalModel(list, context) {
     context = context || { y:calY, m:calM, resort:$('calResort').value };
     var y = context.y, m = context.m, resort = context.resort, times = context.types || BT(resort);
-    var rangeStart = dstr(y, m, 1), rangeEnd = dstr(y, m + 1, 0);
     var bks = list.map(function(b){
       var t = TYPE_COLORS[b.bookType] ? b.bookType : inferType(b.checkIn.replace(' ', 'T'), b.checkOut.replace(' ', 'T'), resort, times).type || 'custom';
-      return {id:b.id, type:t, checkIn:b.checkIn, s:pdate(b.checkIn), e:pdate(b.checkOut)};
+      return {id:b.id, type:t, checkIn:b.checkIn, checkOut:b.checkOut, s:pdate(b.checkIn), e:pdate(b.checkOut)};
     });
     bks.sort(function(a, b){ return (a.s - b.s) || (a.id - b.id); });
-    var map = {};
-    var mp = y + '-' + pad2(m + 1) + '-', gn = 0;
-    bks.forEach(function(b){
-      var hs = halvesFor(b, resort, times, rangeStart, rangeEnd);
-      // Guest numbers follow check-in order for the bookings shown in this month
-      if (hs.some(function(h){ return h[0].indexOf(mp) === 0; })) b.guest = ++gn;
-      hs.forEach(function(h){ (map[h[0] + '|' + h[1]] = map[h[0] + '|' + h[1]] || []).push(b); });
-    });
-    function half(hits, ds, h, both) {
-      if (!hits || !hits.length) return null;
-      var b = hits[0];
-      var guest = hits.length > 1 ? 'Guests ' + hits.map(function(x){ return x.guest || '?'; }).join(' & ')
-                                  : 'Guest ' + (b.guest || '?');
-      return {c1: TYPE_COLORS[b.type], c2: hits.length > 1 ? TYPE_COLORS[hits[1].type] : null,
-              txt: hits.length > 1 ? '#102a30' : TYPE_TEXT[b.type], label: halfLabel(b, ds, h, both, resort, times), guest: guest};
-    }
     var cells = [], days = new Date(y, m + 1, 0).getDate();
+    var gn = 0;
+    // Guest numbers follow check-in order for the bookings shown in this month
+    bks.forEach(function(b){
+      for (var d = 1; d <= days; d++) { if (dayHours_(b, dstr(y, m, d))) { b.guest = ++gn; break; } }
+    });
+    function half(items, ds) {
+      if (!items.length) return null;
+      var b = items[0].b;
+      return {guest: items.length > 1 ? 'Guests ' + items.map(function(x){ return x.b.guest || '?'; }).join(' & ') : 'Guest ' + (b.guest || '?'),
+              label: hLabel_(b, ds, items[0].seg) + (items.length > 1 ? ' +' + (items.length - 1) : ''), txt:'#102a30', c1:TYPE_COLORS[b.type]};
+    }
     for (var d = 1; d <= days; d++) {
-      var ds = dstr(y, m, d), U = map[ds + '|U'], L = map[ds + '|L'];
-      var both = !!(U && L && U.length === 1 && L.length === 1 && U[0].id === L[0].id);
-      cells.push({d:d, U:half(U, ds, 'U', both), L:half(L, ds, 'L', both), center: both ? halfLabel(U[0], ds, 'U', true, resort, times) : null, centerGuest: both ? 'Guest ' + (U[0].guest || '?') : null});
+      var ds = dstr(y, m, d), segs = [];
+      bks.forEach(function(b){ var h = dayHours_(b, ds); if (h) segs.push({b:b, seg:h}); });
+      // labels: bookings starting before noon sit upper-left, the rest lower-right; one booking crossing noon alone is centred
+      var U = segs.filter(function(x){ return x.seg[0] < 12; }), L = segs.filter(function(x){ return x.seg[0] >= 12; });
+      var both = segs.length === 1 && segs[0].seg[0] < 12 && segs[0].seg[1] > 12;
+      cells.push({d:d, ds:ds,
+        bands: segs.map(function(x){ return {a:x.seg[0], z:x.seg[1], color:TYPE_COLORS[x.b.type]}; }),
+        list: segs.map(function(x){ return {guest:x.b.guest, type:x.b.type, checkIn:x.b.checkIn, checkOut:x.b.checkOut, a:x.seg[0], z:x.seg[1]}; }),
+        U: both ? null : half(U, ds), L: both ? null : half(L, ds),
+        center: both ? hLabel_(segs[0].b, ds, segs[0].seg) : null, centerGuest: both ? 'Guest ' + (segs[0].b.guest || '?') : null});
     }
     return {y:y, m:m, firstDow:new Date(y, m, 1).getDay(), days:days, cells:cells, resort:resort};
   }
-  function bgOf(h, fallback) {
-    if (!h) return fallback;
-    return h.c2 ? 'repeating-linear-gradient(45deg,' + h.c1 + ' 0 6px,' + h.c2 + ' 6px 12px)' : h.c1;
-  }
+  function bgOf(h, fallback) { return h ? h.c1 : fallback; }
   function renderCalendar(list) {
     calModel = buildCalModel(list);
     $('calGrid').innerHTML = calendarHtml(calModel);
@@ -1064,11 +1092,13 @@
     for (var i = 0; i < model.firstDow; i++) html += '<div class="cal-cell blank" aria-hidden="true"></div>';
     model.cells.forEach(function(c){
       var isToday = (now.getFullYear() === model.y && now.getMonth() === model.m && now.getDate() === c.d);
-      var label = MONTHS[model.m] + ' ' + c.d + ', ' + model.y + '. Day: ' + (c.U ? c.U.guest + ' ' + c.U.label : 'Open') + '. Overnight: ' + (c.L ? c.L.guest + ' ' + c.L.label : 'Open');
-      html += '<div class="cal-cell' + (isToday ? ' today' : '') + '" role="img" aria-label="' + esc(label) + '">' +
-        '<div class="tri tri-day"' + (c.U ? ' style="background:' + bgOf(c.U) + '"' : '') + '></div>' +
-        '<div class="tri tri-night"' + (c.L ? ' style="background:' + bgOf(c.L) + '"' : '') + '></div>' +
-        '<div class="diag"></div><span class="cnum"' + (c.U ? ' style="color:' + c.U.txt + ';text-shadow:none"' : '') + '>' + c.d + '</span>' +
+      var label = MONTHS[model.m] + ' ' + c.d + ', ' + model.y + ': ' + (c.list && c.list.length ? c.list.map(function(x){ return 'Guest ' + (x.guest || '?') + ' ' + hrTxt_(x.a) + ' to ' + hrTxt_(x.z); }).join('; ') : 'open all day');
+      var svg = c.bands && c.bands.length ? '<svg class="cal-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' + c.bands.map(function(bd){
+          return '<polygon points="' + bandPoly_(bd.a, bd.z, 100, 100).map(function(q){ return q[0].toFixed(2) + ',' + q[1].toFixed(2); }).join(' ') + '" fill="' + bd.color + '"/>';
+        }).join('') + '</svg>' : '';
+      html += '<div class="cal-cell' + (isToday ? ' today' : '') + '" role="button" tabindex="0" data-ds="' + c.ds + '" aria-label="' + esc(label + '. Tap for details.') + '">' +
+        '<div class="tri tri-day"></div><div class="tri tri-night"></div>' + svg +
+        '<div class="diag"></div><span class="cnum">' + c.d + '</span>' +
         (c.center ? '<span class="ct ccenter"><b>' + c.centerGuest + '</b>' + c.center + '</span>' :
           ((c.U ? '<span class="ct cday" style="color:' + c.U.txt + ';text-shadow:none"><b>' + c.U.guest + '</b>' + c.U.label + '</span>' : '') +
            (c.L ? '<span class="ct cnight" style="color:' + c.L.txt + ';text-shadow:none"><b>' + c.L.guest + '</b>' + c.L.label + '</span>' : ''))) +
@@ -1127,10 +1157,16 @@
     M.cells.forEach(function(c, i){
       var pos = M.firstDow + i, col = pos % 7, row = Math.floor(pos / 7);
       var x = pad + col * (cw + gap), y = headH + dowH + row * (ch + gap);
-      paint(x, y, cw, ch, 'U', c.U, '#f6fafb'); paint(x, y, cw, ch, 'L', c.L, '#eceff3');
+      paint(x, y, cw, ch, 'U', null, '#f6fafb'); paint(x, y, cw, ch, 'L', null, '#eceff3');
+      (c.bands || []).forEach(function(bd){
+        var pts = bandPoly_(bd.a, bd.z, cw, ch); if (pts.length < 3) return;
+        g.beginPath(); pts.forEach(function(q, k){ if (k) g.lineTo(x + q[0], y + q[1]); else g.moveTo(x + q[0], y + q[1]); }); g.closePath();
+        g.fillStyle = bd.color; g.fill();
+      });
       g.strokeStyle = '#7d8d92'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y + ch); g.lineTo(x + cw, y); g.stroke();
       g.strokeStyle = '#b9c6c9'; g.strokeRect(x + .5, y + .5, cw - 1, ch - 1);
-      g.textAlign = 'left'; g.font = '800 15px ' + F; g.fillStyle = c.U ? c.U.txt : '#17333a'; g.fillText(String(c.d), x + 7, y + 20);
+      function pill(t, tx, ty, align) { var w = g.measureText(t).width, lx = align === 'right' ? tx - w : tx; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(lx - 3, ty - 12, w + 6, 16); g.fillStyle = '#102a30'; g.textAlign = align; g.fillText(t, tx, ty); }
+      g.font = '800 15px ' + F; pill(String(c.d), x + 7, y + 20, 'left');
       g.font = '700 13px ' + F;
       if (c.center) {
         var tw = Math.max(g.measureText(c.center).width, g.measureText(c.centerGuest).width);
@@ -1138,8 +1174,8 @@
         g.fillStyle = '#102a30'; g.textAlign = 'center';
         g.fillText(c.centerGuest, x + cw / 2, y + ch / 2 - 3); g.fillText(c.center, x + cw / 2, y + ch / 2 + 13);
       } else {
-        if (c.U) { g.fillStyle = c.U.txt; g.textAlign = 'left'; g.fillText(c.U.guest, x + 7, y + 38); g.fillText(c.U.label, x + 7, y + 54); }
-        if (c.L) { g.fillStyle = c.L.txt; g.textAlign = 'right'; g.fillText(c.L.label, x + cw - 7, y + ch - 9); g.fillText(c.L.guest, x + cw - 7, y + ch - 25); }
+        if (c.U) { pill(c.U.guest, x + 7, y + 38, 'left'); pill(c.U.label, x + 7, y + 54, 'left'); }
+        if (c.L) { pill(c.L.label, x + cw - 7, y + ch - 9, 'right'); pill(c.L.guest, x + cw - 7, y + ch - 25, 'right'); }
       }
     });
     // legend
@@ -1152,8 +1188,8 @@
       lx += 22 + g.measureText(TYPE_LABELS[k]).width + 18;
     });
     g.font = '500 12.5px ' + F; g.fillStyle = '#5b6f75';
-    g.fillText('Each date box is split in two: upper-left = Day slot (' + slotText('U', M.resort, M.types) + '), lower-right = Overnight slot (' + slotText('L', M.resort, M.types) + ').', pad, ly + 30);
-    g.fillText('A shaded part is booked. Blank parts are available. Striped parts mean two bookings overlap. Guest numbers follow check-in order for the month.', pad, ly + 50);
+    g.fillText('Each date box reads along its diagonal: upper-left half = 12:00 AM - 11:59 AM, lower-right half = 12:00 PM - 11:59 PM (the line is noon).', pad, ly + 30);
+    g.fillText('Only the booked hours are shaded. Blank parts are available. Guest numbers follow check-in order for the month.', pad, ly + 50);
     var a = document.createElement('a');
     a.download = 'Calendar_' + M.resort.replace(/[^a-z0-9]+/gi, '-') + '_' + M.y + '-' + pad2(M.m + 1) + '.png';
     a.href = cv.toDataURL('image/png');
@@ -2786,7 +2822,7 @@
     $('subBg').style.display = 'none';
     $('admBg').style.display = $('resEdBg').style.display = $('prevBg').style.display = $('delResBg').style.display = $('resLimBg').style.display = $('cancelBg').style.display = 'none';
     FIELDS.forEach(function(f){ $(f).value = ''; });
-    $('modalBg').style.display = $('confirmBg').style.display = $('editBg').style.display = $('calBg').style.display = $('leaveBg').style.display = $('qdBg').style.display = 'none';
+    $('modalBg').style.display = $('confirmBg').style.display = $('editBg').style.display = $('calBg').style.display = $('leaveBg').style.display = $('qdBg').style.display = $('dayBg').style.display = 'none';
     $('exBg').style.display = $('exPhBg').style.display = $('exDelBg').style.display = $('delBkBg').style.display = 'none';
     $('repContent').innerHTML = ''; $('menuMsg').textContent = '';
     EXPENSES = []; exEdit = null; pendingPermDelete = null; permCode = '';          // nothing from the expenses or delete screens stays in memory
@@ -3631,7 +3667,6 @@
         pcModel = buildCalModel(r.list || [], {y:year, m:month, resort:r.resort, types:times}); pcModel.types = times;
         $('pcGrid').innerHTML = calendarHtml(pcModel);
         $('pcKey').innerHTML = TYPE_KEYS.concat(['custom']).map(function(k){ return '<span class="key"><i style="background:' + TYPE_COLORS[k] + '"></i>' + TYPE_LABELS[k] + '</span>'; }).join('');
-        $('pcDayTxt').textContent = slotText('U', r.resort, times); $('pcNightTxt').textContent = slotText('L', r.resort, times);
         $('pcLegend').hidden = false;
       } catch (e) {
         pcModel = null;
@@ -3644,6 +3679,97 @@
   $('pcPrev').onclick = function(){pcDate.setMonth(pcDate.getMonth()-1); loadPinCalendar();}; $('pcNext').onclick = function(){pcDate.setMonth(pcDate.getMonth()+1); loadPinCalendar();}; $('pcResort').onchange = loadPinCalendar; $('pcRefresh').onclick = loadPinCalendar;
   $('pcToday').onclick = function(){ var now = new Date(); pcDate = new Date(now.getFullYear(), now.getMonth(), 1); loadPinCalendar(); };
   $('pcDownload').onclick = function(){ if (pcModel && !pcLoading) drawCalendarImage(null,pcModel); };
+  /* ---------- DAY DETAILS: tap a date on either calendar ----------
+   * Signed in: guest names, exact times, type, payment status and notes come from getDayDetails.
+   * PIN-page calendar (not signed in): only the booked times and types are shown, never guest details. */
+  function hrTxt_(h) {
+    var mins = Math.round(h * 60), hh = Math.floor(mins / 60) % 24, mm = mins % 60;
+    return (hh % 12 || 12) + ':' + pad2(mm) + ' ' + (hh >= 12 ? 'PM' : 'AM');
+  }
+  function fullDT_(str) {
+    var d = pdate(str);
+    return MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getDate() + ', ' + d.getFullYear() + ' · ' + hrTxt_(d.getHours() + d.getMinutes() / 60);
+  }
+  var dayReq = 0;
+  function dayBar_(items) {
+    $('dayBar').innerHTML = '<span class="noon"></span>' + items.map(function(x){
+      return '<i style="left:' + (x.a / 24 * 100).toFixed(2) + '%;width:' + ((x.z - x.a) / 24 * 100).toFixed(2) + '%;background:' + (TYPE_COLORS[x.type] || TYPE_COLORS.custom) + '" title="' + esc(hrTxt_(x.a) + ' - ' + hrTxt_(x.z)) + '"></i>';
+    }).join('');
+  }
+  function typeChip_(t) { t = TYPE_COLORS[t] ? t : 'custom'; return '<span class="dd-type" style="background:' + TYPE_COLORS[t] + ';color:' + TYPE_TEXT[t] + '">' + esc(TYPE_LABELS[t]) + '</span>'; }
+  function openDayDetails(model, ds, signedIn) {
+    var cell = null; (model && model.cells || []).forEach(function(c){ if (c.ds === ds) cell = c; });
+    if (!cell) return;
+    var d = pdate(ds + ' 00:00'), list = cell.list || [];
+    $('dayTitle').textContent = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()] + ', ' + MONTHS[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+    $('daySub').textContent = model.resort + ' · ' + (list.length ? list.length + ' booking' + (list.length > 1 ? 's' : '') + ' on this date' : 'No bookings on this date');
+    dayBar_(list);
+    $('dayBg').style.display = 'flex';
+    if (!list.length) { $('dayList').innerHTML = '<div class="dd-empty">This date is open all day.</div>'; return; }
+    function timeRows(x) {
+      return '<dt>Check-in</dt><dd>' + esc(fullDT_(x.checkIn)) + '</dd><dt>Check-out</dt><dd>' + esc(fullDT_(x.checkOut)) + '</dd>' +
+             '<dt>On this date</dt><dd>' + esc(hrTxt_(x.a) + ' – ' + (x.z >= 24 ? '11:59 PM' : hrTxt_(x.z))) + '</dd>';
+    }
+    if (!signedIn) {
+      $('dayList').innerHTML = list.map(function(x){
+        return '<div class="dd-card" style="border-left-color:' + (TYPE_COLORS[x.type] || TYPE_COLORS.custom) + '"><h4>Guest ' + (x.guest || '?') + '</h4>' + typeChip_(x.type) +
+               '<dl class="dd-grid">' + timeRows(x) + '</dl></div>';
+      }).join('') + '<div class="dd-empty" style="padding:8px 0;font-size:12.5px">Guest names and payment details are shown after you sign in with your PIN.</div>';
+      return;
+    }
+    $('dayList').innerHTML = '<div class="dd-empty">Loading booking details…</div>';
+    var req = ++dayReq;
+    RUN.withSuccessHandler(function(rows){
+        if (req !== dayReq) return;
+        rows = rows || [];
+        if (!rows.length) { $('dayList').innerHTML = '<div class="dd-empty">No active bookings were found for this date.</div>'; return; }
+        $('dayList').innerHTML = rows.map(function(r){
+          var t = TYPE_COLORS[r.bookType] ? r.bookType : 'custom', seg = dayHours_({s:pdate(r.checkIn), e:pdate(r.checkOut)}, ds) || [0, 0];
+          var g = null; list.forEach(function(x){ if (x.checkIn === r.checkIn && x.checkOut === r.checkOut && !g) g = x; });
+          var x = {checkIn:r.checkIn, checkOut:r.checkOut, a:seg[0], z:seg[1]};
+          var paid = r.settled ? '<span class="dd-badge ok">Fully paid</span>' : '<span class="dd-badge due">Balance due ' + esc(peso(r.balance)) + '</span>';
+          var rowsHtml = timeRows(x) +
+            (r.pax ? '<dt>Guests (pax)</dt><dd>' + esc(r.pax) + '</dd>' : '') +
+            (r.contact ? '<dt>Contact #</dt><dd>' + esc(r.contact) + '</dd>' : '') +
+            '<dt>Booking fee</dt><dd>' + esc(peso(r.bookingFee)) + (r.additionalFees ? ' + ' + esc(peso(r.additionalFees)) + ' fees' : '') + (r.extraCharges ? ' + ' + esc(peso(r.extraCharges)) + ' extra' : '') + '</dd>' +
+            '<dt>Down payment</dt><dd>' + esc(peso(r.downPayment)) + (r.mode ? ' · ' + esc(r.mode) : '') + '</dd>' +
+            (r.paidLater ? '<dt>Paid later</dt><dd>' + esc(peso(r.paidLater)) + '</dd>' : '') +
+            '<dt>Payment</dt><dd>' + paid + '</dd>' +
+            (r.marketer ? '<dt>Referred by</dt><dd>' + esc(r.marketer) + '</dd>' : '');
+          return '<div class="dd-card" style="border-left-color:' + TYPE_COLORS[t] + '"><h4>' + esc(r.name || 'Guest') + ' <small>' + (g && g.guest ? 'Guest ' + g.guest + ' · ' : '') + 'Invoice ' + esc(r.invoiceNo) + '</small></h4>' +
+                 typeChip_(t) + '<dl class="dd-grid">' + rowsHtml + '</dl>' + (r.notes ? '<div class="dd-notes">' + esc(r.notes) + '</div>' : '') + '</div>';
+        }).join('');
+      })
+      .withFailureHandler(function(e){ if (req !== dayReq) return; if (authFail(e)) return; $('dayList').innerHTML = '<div class="dd-empty">Could not load the details: ' + esc(e.message) + '</div>'; })
+      .getDayDetails(TOKEN, model.resort, ds);
+  }
+  function wireDayCells_(gridId, getModel, signedIn) {
+    var grid = $(gridId); if (!grid) return;
+    function go(e) { var c = e.target.closest && e.target.closest('.cal-cell[data-ds]'); if (c && grid.contains(c)) openDayDetails(getModel(), c.getAttribute('data-ds'), signedIn()); }
+    grid.addEventListener('click', go);
+    grid.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(e); } });
+  }
+  wireDayCells_('calGrid', function(){ return calModel; }, function(){ return !!TOKEN; });
+  wireDayCells_('pcGrid', function(){ return pcModel; }, function(){ return false; });
+  $('btnDayClose').addEventListener('click', function(){ dayReq++; $('dayBg').style.display = 'none'; });
+  $('dayBg').addEventListener('click', function(e){ if (e.target === this) { dayReq++; this.style.display = 'none'; } });
+
+  /* ---------- MODAL SCROLL LOCK ----------
+   * While any popup (every .modal-bg) is showing, the page behind it can't scroll; it unlocks when the last one closes. */
+  (function () {
+    var root = document.documentElement, queued = false;
+    function sync() {
+      queued = false;
+      var open = false, all = document.querySelectorAll('.modal-bg');
+      for (var i = 0; i < all.length && !open; i++) { if (all[i].style.display && all[i].style.display !== 'none') open = getComputedStyle(all[i]).display !== 'none'; }
+      root.classList.toggle('modal-open', open);
+    }
+    function later() { if (!queued) { queued = true; (window.requestAnimationFrame || setTimeout)(sync); } }
+    try { new MutationObserver(later).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] }); } catch (e) {}
+    sync();
+    window.RD_syncScrollLock = sync;
+  })();
+
   /* ---------- PHONE APP: stay signed in + Back button ----------
    * Stay signed in: after the PIN, this device keeps the session (with its license key) in localStorage, so closing
    * and reopening the app (or the phone clearing it from memory) continues where it was. The server still decides:
@@ -3675,7 +3801,7 @@
   var BACK_CLOSERS = { modalBg: 'btnClose', calBg: 'btnCalClose', qdBg: 'btnQdClose', admBg: 'btnAdmCancel', resEdBg: 'btnResCancel',
     prevBg: 'btnPrevClose', cancelBg: 'btnCancelNo', payBg: 'btnPayX', resLimBg: 'btnResLimNo', delResBg: 'btnDelResNo', exBg: 'btnExCancel',
     exPhBg: 'btnExPhClose', exDelBg: 'btnExDelNo', delBkBg: 'btnDelBkNo', alBg: 'btnAlClose', stlBg: 'btnStlNo', subBg: 'btnSubX',
-    leaveBg: 'btnStay', confirmBg: 'btnKeep', editBg: 'btnBackEdit' };
+    leaveBg: 'btnStay', confirmBg: 'btnKeep', editBg: 'btnBackEdit', dayBg: 'btnDayClose' };
   function isShown_(el) { return !!el && el.style.display !== 'none' && getComputedStyle(el).display !== 'none'; }
   function topPopup_() {
     var best = null, bestZ = -1, all = document.querySelectorAll('[id$="Bg"]');

@@ -3647,6 +3647,26 @@
     var rf = SIGNUP && SIGNUP.referral, enabled = !!(rf && rf.on);
     $('regReferralBanner').hidden = $('regReferralBox').hidden = !enabled;
     $('regReferralText').textContent = enabled ? (rf.banner || 'Have an invitation? Add the referral code below and reward the person who invited you.') : '';
+    $('regPromoBox').hidden = !(SIGNUP && SIGNUP.promo && SIGNUP.promo.on) && !$('regPromo').value;     // shown while the provider has an active promo code
+  }
+  // promo code on the registration form: checked when "Apply" is pressed (and again by the server on submit)
+  var promoOk = '';
+  function promoMsg(text, cls) { var e = $('regPromoMsg'); e.textContent = text || ''; e.className = 'promo-msg' + (cls ? ' ' + cls : ''); }
+  function checkPromo(then) {
+    var code = $('regPromo').value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    $('regPromo').value = code;
+    if (!code) { promoOk = ''; promoMsg(''); if (then) then(true); return; }
+    if (code === promoOk) { if (then) then(true); return; }
+    if (!(window.google && google.script)) { if (then) then(true); return; }
+    setBusy($('btnPromoApply'), true, 'Checking...');
+    google.script.run
+      .withSuccessHandler(function(r){
+        setBusy($('btnPromoApply'), false);
+        if (r && r.valid) { promoOk = code; promoMsg(r.message, 'ok'); if (then) then(true); }
+        else { promoOk = ''; promoMsg((r && r.message) || 'That promo code could not be checked.', 'err'); if (then) then(false); }
+      })
+      .withFailureHandler(function(e){ setBusy($('btnPromoApply'), false); promoOk = ''; promoMsg('Could not check the promo code: ' + e.message, 'err'); if (then) then(false); })
+      .checkPromoCode(code);
   }
   function loadSignupInfo() {
     if (SIGNUP || !(window.google && google.script)) { showTerms(); return; }
@@ -3659,12 +3679,17 @@
     if (!em) { licMsg('Please enter your email address.'); return; }
     if (SIGNUP && SIGNUP.terms && SIGNUP.terms.required && !$('regTerms').checked) { licMsg('Please read and accept the Terms and Conditions to register.'); return; }
     var pin = pinPair('regPin1', 'regPin2'); if (!pin) return;
+    var promo = $('regPromo').value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    if (promo && promo !== promoOk) {            // not checked yet: check it first, then continue (or stop with the reason)
+      checkPromo(function(ok){ if (ok) doRegister(); else { licMsg('Fix or remove the promo code, then try again.'); $('regPromo').focus(); } });
+      return;
+    }
     licMsg(''); setBusy($('btnLicReg'), true, 'Starting your demo...');
     RUN
       .withSuccessHandler(function(res){
         setBusy($('btnLicReg'), false);
         if (res.ok) {
-          $('regName').value = ''; $('regPhone').value = ''; $('regPin1').value = ''; $('regPin2').value = ''; $('regTerms').checked = false;
+          $('regName').value = ''; $('regPhone').value = ''; $('regPin1').value = ''; $('regPin2').value = ''; $('regTerms').checked = false; $('regPromo').value = ''; promoOk = ''; promoMsg('');
           if (res.emailed) {       // the key is in their inbox: show the key box and say so
             $('regEmail').value = ''; licMode = ''; licGate({reason: 'activate', hosted: true}); licMsg(res.message); $('licKey').focus();
             return;
@@ -3678,10 +3703,11 @@
         if (res.code === 'exists') { licMode = ''; licGate(LIC || {reason: 'activate'}); }       // they already have a key: back to the key box
         if (res.code === 'terms') { SIGNUP = null; loadSignupInfo(); $('regTermsBox').style.display = 'flex'; }
         if (res.code === 'demo_used' || res.code === 'closed') $('licRenew').innerHTML = renewHtml(res.renewal, res.pricing, {hosted: false});
+        if (/^promo/.test(res.code || '')) { promoOk = ''; promoMsg(res.message, 'err'); $('regPromoBox').hidden = false; $('regPromo').focus(); }
         licMsg(res.message);
       })
       .withFailureHandler(function(e){ setBusy($('btnLicReg'), false); licMsg('Could not start the demo: ' + e.message); })
-      .registerDemo(n, $('regPhone').value.trim(), em, pin, $('regTerms').checked, $('regReferral').value.trim());
+      .registerDemo(n, $('regPhone').value.trim(), em, pin, $('regTerms').checked, $('regReferral').value.trim(), promo);
   }
   // the PIN is typed twice; returns it, or '' after showing what is wrong
   function pinPair(a, b) {
@@ -3741,6 +3767,11 @@
       if (rs.requested) rows.push(['Extra resort request', 'Waiting for approval']);
     }
     if (l.referral) { rows.push(['Referral code', l.referral.code]); rows.push(['Active referrals', l.referral.active + ' (' + l.referral.perPct + '% each, up to ' + l.referral.maxPct + '%)']); rows.push(['Referral discount', l.referral.pct + '% on recurring plans']); if (pp && pp.discount) rows.push(['Referral savings this period', pp.discountText]); }
+    if (l.clientDiscount) {
+      var cd = l.clientDiscount;
+      rows.push(['Your discount', cd.text + (cd.promo ? ' (promo ' + cd.promo + ')' : '')]);
+      if (pp && pp.clientDiscount) rows.push(['Discount savings this period', pp.clientDiscountText]);
+    }
     if (l.cancelled) rows.splice(2, 0, ['Renewal', 'Cancelled on ' + l.cancelled.slice(0, 10) + ' - no more renewal notices']);
     if (l.business) rows.unshift(['Business', l.business]);
     if (l.registered) rows.push(['Registered email', (l.isRegistered && l.signedInAs) ? l.signedInAs : l.registered]);
@@ -3900,6 +3931,9 @@
   $('btnLicAct').addEventListener('click', doActivate);
   $('licKey').addEventListener('keydown', function(e){ if (e.key === 'Enter') doActivate(); });
   $('btnLicReg').addEventListener('click', doRegister);
+  $('btnPromoApply').addEventListener('click', function(){ checkPromo(); });
+  $('regPromo').addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); checkPromo(); } });
+  $('regPromo').addEventListener('input', function(){ if (promoOk) { promoOk = ''; promoMsg(''); } });
   $('btnLicSetup').addEventListener('click', doSetup);
   ['regPin1', 'regPin2', 'setPin1', 'setPin2'].forEach(function(id){ $(id).addEventListener('input', function(){ onlyDigits(this); }); });
   $('setPin2').addEventListener('keydown', function(e){ if (e.key === 'Enter') doSetup(); });
@@ -4203,6 +4237,7 @@
     try {
       google.script.url.getLocation(function(loc){
         var ref = loc && loc.parameter && loc.parameter.ref; if (ref) $('regReferral').value = String(ref).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0,12);
+        var promoP = loc && loc.parameter && loc.parameter.promo; if (promoP) { $('regPromo').value = String(promoP).toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0,20); $('regPromoBox').hidden = false; }
         var t = loc && loc.parameter && loc.parameter.admin;
         var client = loc && loc.parameter && loc.parameter.client;
         if (booted) return;

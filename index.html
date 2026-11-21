@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=65d4de9ea5">
+<link rel="stylesheet" href="app.css?v=1079dbc4d0">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -169,6 +169,9 @@
       <input id="regPhone" type="tel" maxlength="40" autocomplete="tel">
       <div class="ref-banner" id="regReferralBanner" hidden><strong>Share the rewards</strong><p id="regReferralText"></p></div>
       <div id="regReferralBox" hidden><label for="regReferral">Referral code (optional)</label><input id="regReferral" maxlength="12" autocapitalize="characters" autocomplete="off" placeholder="Enter your invitation code"></div>
+      <div id="regPromoBox" hidden><label for="regPromo">Promo code (optional)</label>
+        <div class="promo-row"><input id="regPromo" maxlength="20" autocapitalize="characters" autocomplete="off" placeholder="Enter a promo code"><button class="ghost-btn" id="btnPromoApply" type="button">Apply</button></div>
+        <div class="promo-msg" id="regPromoMsg" role="status" aria-live="polite"></div></div>
       <label for="regPin1">Choose your 6-digit PIN</label>
       <input class="pin-input" id="regPin1" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password" placeholder="------">
       <label for="regPin2">Type the PIN again</label>
@@ -1038,7 +1041,7 @@
   </div>
 </div>
 
-<script src="app.js?v=9bb2152614"></script>
+<script src="app.js?v=90a65cb1ef"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

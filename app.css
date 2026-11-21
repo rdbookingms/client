@@ -532,6 +532,9 @@
   .rn-plans div span:last-child { text-align:right; color:var(--muted); } .rn-plans b { color:var(--ink); font-size:14.5px; }
   .lic-alt { display:block; margin-top:14px; }
   .lic-hint { font-size:12px; color:var(--muted); margin-top:6px; line-height:1.4; }
+  .promo-row { display:flex; gap:8px; align-items:stretch; } .promo-row input { flex:1; min-width:0; text-transform:uppercase; }
+  .promo-row button { white-space:nowrap; padding:0 16px; }
+  .promo-msg { font-size:13px; margin-top:6px; line-height:1.45; min-height:0; } .promo-msg.ok { color:#1b7f3b; } .promo-msg.err { color:#c62828; }
   .lic-terms { display:flex; align-items:flex-start; gap:8px; margin:12px 0 2px; font-size:13.5px; font-weight:400; line-height:1.4; cursor:pointer; }
   .lic-terms input { width:auto; margin:2px 0 0; flex:0 0 auto; }
   .lic-terms a { color:#0b6d79; font-weight:700; }

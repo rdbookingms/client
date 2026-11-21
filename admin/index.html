@@ -83,6 +83,11 @@
   td.num, th.num { text-align:right; white-space:nowrap; }
   td .nm { font-weight:700; } td .em { color:var(--muted); font-size:12.5px; overflow-wrap:anywhere; }
   tr.void td { color:var(--muted); text-decoration:line-through; } tr.void td:last-child { text-decoration:none; }
+  .dmode { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .dmode label { margin:0; display:flex; gap:8px; align-items:flex-start; border:1px solid var(--line, #dfe6e8); border-radius:10px; padding:8px 10px; cursor:pointer; font-weight:400; }
+  .dmode label b { font-weight:700; } .dmode input { width:auto; margin-top:3px; }
+  @media (max-width:560px) { .dmode { grid-template-columns:minmax(0,1fr); } }
+  .b-disc { background:#e8f5e9; color:#1b6b30; }
   .badge { display:inline-block; border-radius:20px; padding:3px 10px; font-size:12px; font-weight:700; white-space:nowrap; }
   .b-ok { background:var(--ok-bg); color:var(--ok); } .b-warn { background:var(--warn-bg); color:var(--warn); }
   .b-bad { background:var(--bad-bg); color:var(--bad); } .b-off { background:var(--off-bg); color:var(--off); }
@@ -190,6 +195,7 @@
     <button data-tab="money" type="button">Payments &amp; finance<span class="tb" id="tabPend" style="display:none"></span></button>
     <button data-tab="expenses" type="button">Expenses</button>
     <button data-tab="referrals" type="button">Referrals</button>
+    <button data-tab="promos" type="button">Promotions</button>
     <button data-tab="pricing" type="button">Pricing &amp; renewal info</button>
     <button data-tab="terms" type="button">Terms</button>
     <button data-tab="alerts" type="button">Alerts &amp; setup</button>
@@ -352,6 +358,16 @@
   </section>
 
   <!-- ============ TERMS AND CONDITIONS ============ -->
+  <!-- ============ PROMOTIONS ============ -->
+  <section id="tab_promos" style="display:none">
+    <div class="card">
+      <h2>Promo codes</h2>
+      <p class="sub">New clients type a promo code on the registration form of the booking app (it stacks with a referral code). The code's discount and duration are linked to their account and taken off their subscription after any referral discount. Switching a code off or letting it expire only stops new sign-ups; clients who already redeemed it keep their discount.</p>
+      <div class="bar" style="margin:0 0 10px"><input class="grow" id="prq" type="search" placeholder="Search promo codes" aria-label="Search promo codes"><button class="btn pri" id="btnPromoNew" type="button">+ New promo code</button></div>
+      <div id="prlist"></div>
+    </div>
+  </section>
+
   <section id="tab_terms" style="display:none">
     <div class="card">
       <h2>Terms and Conditions for new clients</h2>
@@ -473,6 +489,7 @@
     <label class="chk"><input id="eFreeResorts" type="checkbox"> Unlimited resorts at no extra charge</label>
     <div class="hint">Exempts this client from all extra-resort fees and approval limits. Existing resorts and approved counts are retained.</div>
     <div class="hint" id="eXrHint"></div>
+    <div class="keybox" id="eDiscBox" style="border-style:solid;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><span id="eDiscText"></span><button class="btn sm" id="btnEditDisc" type="button">Recurring discount...</button></div>
     <label class="chk"><input id="eLegacy" type="checkbox"> Legacy Pricing (keeps their own rates when you change the price list)</label>
     <div class="grid2" id="eLegacyBox">
       <div><label for="eLegacyPrice">Custom base subscription price (<span id="eLegacyTier"></span>)</label><input id="eLegacyPrice" inputmode="decimal"></div>
@@ -622,6 +639,61 @@
   </div>
 </div>
 
+<!-- create / edit a promo code -->
+<div class="bg" id="prBg">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="prTitle" style="max-width:620px">
+    <h3 id="prTitle">New promo code</h3>
+    <div class="grid3">
+      <div><label for="prCode">Code</label><input id="prCode" maxlength="20" autocomplete="off" style="text-transform:uppercase;font-family:Consolas,Menlo,monospace" placeholder="SUMMER26"></div>
+      <div><label for="prType">Discount type</label><select id="prType"><option value="pct">Percentage</option><option value="fix">Fixed amount</option></select></div>
+      <div><label for="prValue" id="prValueL">Percentage (%)</label><input id="prValue" inputmode="decimal"></div>
+    </div>
+    <div class="grid3">
+      <div><label for="prMax">Max redemptions (sign-ups)</label><input id="prMax" type="number" min="1" step="1" placeholder="No limit"></div>
+      <div><label for="prExp">Code expires on</label><input id="prExp" type="date"></div>
+      <div><label for="prApplies">Discount applies to</label><select id="prApplies"><option value="first">First payment only</option><option value="count">First N payments</option><option value="until">Every payment until a date</option><option value="life">Every renewal (lifetime)</option></select></div>
+    </div>
+    <div class="grid3" id="prDurBox">
+      <div id="prUntilW"><label for="prUntil">Discount ends on</label><input id="prUntil" type="date"></div>
+      <div id="prCountW"><label for="prCount">Number of payments</label><input id="prCount" type="number" min="1" max="120" step="1" value="3"></div>
+    </div>
+    <label for="prTerms">Promo terms (shown to the client when they apply the code)</label><textarea id="prTerms" rows="2" maxlength="500" placeholder="New clients only. Cannot be exchanged for cash."></textarea>
+    <label class="chk"><input id="prActive" type="checkbox" checked> On (new clients can use this code)</label>
+    <div class="keybox" id="prPreview" style="border-style:solid"></div>
+    <div class="msg" id="prMsg"></div>
+    <div class="foot"><button class="btn" data-close type="button">Cancel</button><button class="btn pri" id="btnPrSave" type="button">Save promo code</button></div>
+  </div>
+</div>
+
+<!-- per-client recurring discount -->
+<div class="bg" id="dcBg">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dcTitle" style="max-width:620px">
+    <h3 id="dcTitle">Recurring discount</h3>
+    <p class="hint" id="dcWho" style="font-size:13.5px"></p>
+    <label class="chk"><input id="dcOn" type="checkbox"> Give this client a recurring discount</label>
+    <div id="dcBody">
+      <label>Duration</label>
+      <div class="dmode">
+        <label><input type="radio" name="dcMode" value="life"><span><b>Recurring, lifetime</b><br><span class="hint">Every renewal, no end</span></span></label>
+        <label><input type="radio" name="dcMode" value="until"><span><b>Recurring until a date</b><br><span class="hint">Stops after the end date</span></span></label>
+        <label><input type="radio" name="dcMode" value="count"><span><b>Recurring for N renewals</b><br><span class="hint">Counts down with each confirmed payment</span></span></label>
+        <label><input type="radio" name="dcMode" value="promo"><span><b>Apply a previous promotion</b><br><span class="hint">Copies a promo code's discount and duration</span></span></label>
+      </div>
+      <div class="grid3" id="dcOwn">
+        <div><label for="dcType">Discount type</label><select id="dcType"><option value="pct">Percentage</option><option value="fix">Fixed amount</option></select></div>
+        <div><label for="dcValue" id="dcValueL">Percentage (%)</label><input id="dcValue" inputmode="decimal"></div>
+        <div id="dcUntilW"><label for="dcUntil">End date</label><input id="dcUntil" type="date"></div>
+        <div id="dcCountW"><label for="dcCount">Number of renewals</label><input id="dcCount" type="number" min="1" max="120" step="1" value="3"></div>
+      </div>
+      <div id="dcPromoW"><label for="dcPromo">Promotion</label><select id="dcPromo"></select><div class="hint">Attaching a promotion does not use up one of its sign-ups.</div></div>
+      <label for="dcNote">Note (only you see this)</label><input id="dcNote" maxlength="200" placeholder="Loyal client since 2025">
+    </div>
+    <div class="keybox" id="dcPreview" style="border-style:solid"></div>
+    <div class="msg" id="dcMsg"></div>
+    <div class="foot"><button class="btn" data-close type="button">Cancel</button><button class="btn pri" id="btnDcSave" type="button">Save discount</button></div>
+  </div>
+</div>
+
 <!-- new prices: new clients only (Legacy Pricing) or everyone -->
 <div class="bg" id="psBg">
   <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="psTitle" style="max-width:520px">
@@ -725,7 +797,23 @@
   function cFee(c) { return c && c.rates && c.rates.extraFee !== undefined && c.rates.extraFee !== null ? Number(c.rates.extraFee) || 0 : extraFee(); }
   function extraOf(c, tier) { return c && c.freeResorts ? 0 : Math.round(cFee(c) * ((c && c.extraResorts) || 0) * (MONTHS_IN[tier] || 0) * 100) / 100; }
   function discOf(c) { return Math.min(100, Math.max(0, Number(c && c.discountPct) || 0)); }      // referral discount in percent
-  function totalOf(c, tier) { return Math.round((cPrice(c, tier) + extraOf(c, tier)) * (1 - (MONTHS_IN[tier] ? discOf(c) : 0) / 100) * 100) / 100; }
+  function totalNoClientDisc(c, tier) { return Math.round((cPrice(c, tier) + extraOf(c, tier)) * (1 - (MONTHS_IN[tier] ? discOf(c) : 0) / 100) * 100) / 100; }
+  function clientDiscOf(c) { return c && c.rates && c.rates.clientDisc ? c.rates.clientDisc : null; }
+  function totalOf(c, tier) {          // per period, after the referral discount and the client's recurring discount
+    var t = totalNoClientDisc(c, tier), d = clientDiscOf(c);
+    if (d && tier !== 'Demo' && t > 0) t = d.type === 'pct' ? Math.round(t * (1 - d.value / 100) * 100) / 100 : Math.max(0, Math.round((t - d.value) * 100) / 100);
+    return t;
+  }
+  function grossFor(c, tier, n) {       // n periods: a 'for N renewals' discount covers only the renewals left
+    var d = clientDiscOf(c), k = !d || tier === 'Demo' ? 0 : d.mode === 'count' ? Math.min(n, d.left) : n;
+    return Math.round((totalOf(c, tier) * k + totalNoClientDisc(c, tier) * (n - k)) * 100) / 100;
+  }
+  function discLine(c) {
+    if (!c) return '';
+    if (c.discountText) return '<span class="badge b-disc">' + esc(c.discountText) + '</span>' + (c.discount && c.discount.promo ? ' <span class="em">promo ' + esc(c.discount.promo) + '</span>' : '');
+    if (c.discountEnded) return '<span class="em">Recurring discount ended' + (c.discount && c.discount.promo ? ' (promo ' + esc(c.discount.promo) + ')' : '') + '.</span>';
+    return '';
+  }
   function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
 
   /* ---------- server calls ---------- */
@@ -768,7 +856,7 @@
     S = v;
     $('me').textContent = (v.me ? 'Signed in as ' + v.me + '  |  ' : '') + 'Today: ' + nice(v.today);
     $('lgBg').style.display = 'none'; $('app').style.display = '';
-    fillConfig(); render(); renderMoney(); renderExpenses(); renderRef();
+    fillConfig(); render(); renderMoney(); renderExpenses(); renderRef(); renderPromos();
   }
 
   /* ---------- clients list ---------- */
@@ -825,7 +913,7 @@
       var req = c.resortRequest ? '<div class="reqbox"><span class="badge b-req">Wants +' + c.resortRequest + ' resort' + (c.resortRequest === 1 ? '' : 's') + '</span>' +
         '<button class="btn sm pri" data-rq="1" data-k="' + k + '" type="button">Approve</button><button class="btn sm" data-rq="0" data-k="' + k + '" type="button">Decline</button></div>' : '';
       h += '<tr><td><div class="nm">' + esc(c.name) + (isSelf(c) ? '<span class="badge b-self">Self-registered</span>' : '') + (c.cancelled ? '<span class="badge b-cancel" title="Cancelled on ' + esc(c.cancelledOn) + ': no renewal notices, access until expiry">Cancelled</span>' : '') + (c.legacy ? '<span class="badge b-warn" style="margin-left:6px;font-size:11px" title="Keeps their own rates when the price list changes">Legacy Pricing</span>' : '') + '</div><div class="em">' + esc(c.email) + (c.phone ? ' &middot; ' + esc(c.phone) : '') + '</div>' + req + '</td>' +
-        '<td data-l="Tier"><span class="badge b-tier">' + esc(c.tier) + '</span><div class="em">' + (c.tier === 'Demo' && !pr ? 'Free' : pr ? esc(money(pr)) + ' ' + PERIOD[c.tier] : 'No price set') + '</div>' + xrLine + refLine(c) + '</td>' +
+        '<td data-l="Tier"><span class="badge b-tier">' + esc(c.tier) + '</span><div class="em">' + (c.tier === 'Demo' && !pr ? 'Free' : pr ? esc(money(pr)) + ' ' + PERIOD[c.tier] : 'No price set') + '</div>' + (c.discountText ? '<div style="margin-top:3px">' + discLine(c) + '</div>' : '') + xrLine + refLine(c) + '</td>' +
         '<td data-l="Status">' + statusBadge(c) + '</td>' +
         '<td data-l="Expires">' + (c.lifetime ? 'Never' : esc(nice(c.expiry)) + '<div class="em">' + esc(leftText(c)) + '</div>') + '</td>' +
         '<td data-l="Direct login"><span class="em">' + (c.directLogin ? esc(c.directLogin) : 'Not recorded yet') + '</span><div><span class="badge ' + (c.activity && c.activity.status === 'active' ? 'b-ok' : c.activity && c.activity.status === 'risk' ? 'b-bad' : c.activity && c.activity.status === 'rare' ? 'b-warn' : 'b-off') + '">' + esc(c.activity ? c.activity.label : 'No direct login recorded') + '</span></div></td>' +
@@ -945,6 +1033,8 @@
     $('eRefExcluded').checked = !!(c && c.referralExcluded);
     $('eFinExcluded').checked = !!(c && c.financialExcluded);
     $('eLegacy').checked = !!(c && c.legacy); syncLegacy(true);
+    $('eDiscBox').style.display = c ? 'flex' : 'none';
+    if (c) $('eDiscText').innerHTML = discLine(c) || '<span class="em">No recurring discount.</span>';
     $('eRefHint').textContent = c ? 'This client\'s own referral code: ' + c.refCode + (c.refTotal ? ' (' + c.refActive + ' of ' + c.refTotal + ' referred clients active, ' + (c.discountPct || 0) + '% off).' : '.') +
       (c.refBy ? ' Referred by ' + (c.refByName || 'an unknown code') + '.' : '') : 'If someone referred this client, type their code. A code that starts with P belongs to a partner.';
     $('btnDel').style.display = c ? '' : 'none';
@@ -1010,7 +1100,7 @@
     $('pyPeriods').disabled = one;
     var n = Math.max(1, Math.floor(Number($('pyPeriods').value) || 1)), pr = totalOf(c, tier), xp = extraOf(c, tier), ext = $('pyExtend').checked;
     $('pyOverBox').style.display = (tier === 'Demo' && ext) ? 'flex' : 'none';
-    var gross = Math.round(pr * n * 100) / 100, kind = $('pyDiscountType').value, value = Number($('pyDiscountValue').value) || 0;
+    var gross = grossFor(c, tier, n), kind = $('pyDiscountType').value, value = Number($('pyDiscountValue').value) || 0;
     $('pyDiscountValue').disabled = kind === 'none'; $('pyDiscountValue').max = kind === 'percent' ? '100' : String(gross);
     var off = kind === 'percent' ? Math.round(gross * value) / 100 : kind === 'fixed' ? value : 0;
     var valid = value >= 0 && (kind !== 'percent' || value <= 100) && off <= gross;
@@ -1019,7 +1109,8 @@
     if (!amountTouched && valid) $('pyAmount').value = String(net);
     $('pyPriceHint').textContent = (pr ? 'Subscription total: ' + money(pr) + ' ' + PERIOD[tier] +
         (xp ? ' (' + money(cPrice(c, tier)) + ' plan + ' + money(xp) + ' for ' + plural(c.extraResorts, 'extra resort') + ' at ' + money(cFee(c)) + ' per month)' : '') + (c.legacy ? ' Legacy Pricing.' : '') +
-        (n > 1 ? ' x ' + n + ' = ' + money(pr * n) : '') + (discOf(c) ? ', after the ' + discOf(c) + '% referral discount' : '') + '. Change the amount if you gave a discount.'
+        (n > 1 ? ' x ' + n + ' = ' + money(gross) : '') + (discOf(c) ? ', after the ' + discOf(c) + '% referral discount' : '') +
+        (c.discountText ? ', with the client\'s recurring discount (' + c.discountText + ')' : '') + '. Change the amount if you gave a discount.'
       : 'No price is set for ' + tier + ' yet (Pricing tab). Type the amount that was paid.') +
       (tier === 'Lifetime' && !c.freeResorts && c.extraResorts && extraFee() ? ' Lifetime has no renewals: this client also owes ' + money(extraFee() * c.extraResorts) + ' per month for ' + plural(c.extraResorts, 'extra resort') + ' - log those payments as type Other with "Extend the subscription" unticked.' : '');
     var early = c.status === 'active' && !c.lifetime && c.daysLeft > 0 && c.tier !== 'Demo';
@@ -1216,7 +1307,7 @@
     });
   }
 
-  var TABS = ['clients', 'money', 'expenses', 'referrals', 'pricing', 'terms', 'alerts'];
+  var TABS = ['clients', 'money', 'expenses', 'referrals', 'promos', 'pricing', 'terms', 'alerts'];
   function showTab(name) {
     Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === name); });
     TABS.forEach(function (t) { $('tab_' + t).style.display = (t === name) ? '' : 'none'; });
@@ -1451,6 +1542,97 @@
       function () { show('poBg', false); toast('Payout to ' + p.name + ' logged. They were emailed.'); payoutFor = null; }, 'poMsg',
       function (v) { if (v.needForce) $('poForceBox').style.display = 'flex'; });
   }
+  /* ---------- Promotions tab ---------- */
+  var promoEditing = null;
+  function promoText(p) {
+    var amt = p.type === 'pct' ? p.value + '%' : money(p.value);
+    return amt + ' off ' + (p.appliesTo === 'first' ? 'the first payment' : p.appliesTo === 'life' ? 'every renewal' : p.appliesTo === 'until' ? 'every payment until ' + nice(p.until) : 'the first ' + p.payments + ' payments');
+  }
+  function renderPromos() {
+    var L = S.promos || [], q = ($('prq').value || '').trim().toLowerCase();
+    var rows = L.filter(function (p) { return !q || (p.code + ' ' + p.terms).toLowerCase().indexOf(q) >= 0; });
+    if (!L.length) { $('prlist').innerHTML = '<div class="empty">No promo codes yet. Choose <b>+ New promo code</b>.</div>'; return; }
+    if (!rows.length) { $('prlist').innerHTML = '<div class="empty">No promo codes match this search.</div>'; return; }
+    var cls = { Active: 'b-ok', Expired: 'b-bad', 'Used up': 'b-warn', Off: 'b-off' };
+    $('prlist').innerHTML = '<table><thead><tr><th>Code</th><th>Discount</th><th>Redeemed</th><th>Expires</th><th>Status</th><th></th></tr></thead><tbody>' + rows.map(function (p) {
+      var pct = p.max ? Math.min(100, Math.round(p.redeemed / p.max * 100)) : 0, c = esc(p.code);
+      return '<tr><td><span class="badge b-code" data-copy="' + c + '" title="Click to copy">' + c + '</span>' + (p.terms ? '<div class="em" style="margin-top:4px">' + esc(p.terms) + '</div>' : '') + '</td>' +
+        '<td data-l="Discount">' + esc(promoText(p)) + '</td>' +
+        '<td data-l="Redeemed"><b>' + p.redeemed + '</b>' + (p.max ? ' / ' + p.max + '<div style="height:5px;background:#eef1f2;border-radius:4px;margin-top:4px;max-width:120px"><div style="height:5px;border-radius:4px;background:var(--teal);width:' + pct + '%"></div></div>' : ' <span class="em">(no limit)</span>') + '</td>' +
+        '<td data-l="Expires">' + (p.expires ? esc(nice(p.expires)) : '<span class="em">Never</span>') + '</td>' +
+        '<td data-l="Status"><span class="badge ' + (cls[p.status] || 'b-off') + '">' + esc(p.status) + '</span></td>' +
+        '<td><div class="acts"><label class="chk" style="margin:0"><input type="checkbox" data-pron="' + c + '"' + (p.active ? ' checked' : '') + '> ' + (p.active ? 'On' : 'Off') + '</label><button class="btn sm" data-predit="' + c + '" type="button">Edit</button></div></td></tr>';
+    }).join('') + '</tbody></table>';
+  }
+  function syncPromoForm() {
+    var a = $('prApplies').value;
+    $('prValueL').textContent = $('prType').value === 'pct' ? 'Percentage (%)' : 'Amount (' + (S.config.currency || '') + ')';
+    $('prDurBox').style.display = a === 'until' || a === 'count' ? '' : 'none';
+    $('prUntilW').style.display = a === 'until' ? '' : 'none'; $('prCountW').style.display = a === 'count' ? '' : 'none';
+    var p = { type: $('prType').value, value: Number($('prValue').value) || 0, appliesTo: a, until: $('prUntil').value, payments: Number($('prCount').value) || 1 };
+    $('prPreview').innerHTML = p.value > 0 ? 'Clients who register with <b>' + esc(($('prCode').value || 'this code').toUpperCase()) + '</b> get <b>' + esc(promoText(p)) + '</b>' +
+      ($('prMax').value ? ', for up to ' + esc($('prMax').value) + ' sign-ups' : '') + ($('prExp').value ? ', until the code expires on ' + esc(nice($('prExp').value)) : '') + '.' : 'Type the discount value.';
+  }
+  function openPromo(p) {
+    promoEditing = p || null;
+    $('prTitle').textContent = p ? 'Edit promo code' : 'New promo code';
+    $('prCode').value = p ? p.code : ''; $('prType').value = p ? p.type : 'pct'; $('prValue').value = p ? p.value : '';
+    $('prMax').value = p && p.max ? p.max : ''; $('prExp').value = p ? p.expires : ''; $('prApplies').value = p ? p.appliesTo : 'first';
+    $('prUntil').value = p ? p.until : ''; $('prCount').value = p && p.appliesTo === 'count' ? p.payments : 3; $('prTerms').value = p ? p.terms : '';
+    $('prActive').checked = p ? p.active : true; $('prMsg').textContent = '';
+    $('prCode').disabled = !!(p && p.redeemed);
+    syncPromoForm(); show('prBg', true); setTimeout(function () { (p ? $('prValue') : $('prCode')).focus(); }, 50);
+  }
+  function savePromo() {
+    $('prMsg').textContent = '';
+    var o = { original: promoEditing ? promoEditing.code : '', code: $('prCode').value, type: $('prType').value, value: $('prValue').value, max: $('prMax').value,
+              expires: $('prExp').value, appliesTo: $('prApplies').value, until: $('prUntil').value, payments: $('prCount').value, terms: $('prTerms').value, active: $('prActive').checked };
+    call('adminSavePromo', [o], function (v) { show('prBg', false); toast('Promo code ' + v.promoCode + (promoEditing ? ' saved.' : ' created.')); promoEditing = null; }, 'prMsg');
+  }
+  /* ---------- per-client recurring discount ---------- */
+  var discFor = null;
+  function dcMode() { var r = document.querySelector('input[name=dcMode]:checked'); return r ? r.value : 'life'; }
+  function openDiscount(c) {
+    discFor = c; var d = c.discount || null;
+    $('dcWho').textContent = c.name + ' - ' + c.tier + (c.tier !== 'Demo' ? ', ' + money(totalNoClientDisc(c, c.tier)) + ' ' + PERIOD[c.tier] + ' before this discount' : '') + '. Applies to future payments; payments already logged do not change.';
+    $('dcOn').checked = !!d;
+    var mode = d ? (d.promo ? 'promo' : d.mode) : 'life';
+    Array.prototype.forEach.call(document.querySelectorAll('input[name=dcMode]'), function (r) { r.checked = r.value === mode; });
+    $('dcType').value = d ? d.type : 'pct'; $('dcValue').value = d ? d.value : 10;
+    $('dcUntil').value = d && d.until ? d.until : ''; $('dcCount').value = d && d.mode === 'count' ? Math.max(1, d.left || d.total || 1) : 3; $('dcNote').value = d ? (d.note || '') : '';
+    var P = S.promos || [];
+    $('dcPromo').innerHTML = P.length ? P.map(function (p) { return '<option value="' + esc(p.code) + '"' + (d && d.promo === p.code ? ' selected' : '') + '>' + esc(p.code + ' - ' + promoText(p) + (p.status !== 'Active' ? ' (' + p.status.toLowerCase() + ')' : '')) + '</option>'; }).join('') : '<option value="">No promo codes yet (Promotions tab)</option>';
+    $('dcMsg').textContent = ''; syncDiscount(); show('dcBg', true);
+  }
+  function syncDiscount() {
+    var c = discFor; if (!c) return;
+    var on = $('dcOn').checked, m = dcMode();
+    $('dcBody').style.display = on ? '' : 'none';
+    $('dcOwn').style.display = m === 'promo' ? 'none' : ''; $('dcPromoW').style.display = m === 'promo' ? '' : 'none';
+    $('dcUntilW').style.display = m === 'until' ? '' : 'none'; $('dcCountW').style.display = m === 'count' ? '' : 'none';
+    $('dcValueL').textContent = $('dcType').value === 'pct' ? 'Percentage (%)' : 'Amount (' + (S.config.currency || '') + ')';
+    if (!on) { $('dcPreview').innerHTML = 'No recurring discount: this client pays ' + esc(money(totalNoClientDisc(c, c.tier))) + ' ' + (PERIOD[c.tier] || '') + '.'; return; }
+    var d;
+    if (m === 'promo') { var p = (S.promos || []).filter(function (x) { return x.code === $('dcPromo').value; })[0]; if (!p) { $('dcPreview').textContent = 'Create a promo code first (Promotions tab).'; return; }
+      d = { type: p.type, value: p.value, desc: 'Promotion ' + p.code + ': ' + promoText(p) }; }
+    else { var v = Number($('dcValue').value) || 0; d = { type: $('dcType').value, value: v,
+      desc: ($('dcType').value === 'pct' ? v + '%' : money(v)) + ' off ' + (m === 'life' ? 'every renewal' : m === 'until' ? 'every renewal until ' + ($('dcUntil').value ? nice($('dcUntil').value) : '(choose a date)') : 'the next ' + ($('dcCount').value || 0) + ' renewals') }; }
+    var before = totalNoClientDisc(c, c.tier), after = d.type === 'pct' ? Math.round(before * (1 - d.value / 100) * 100) / 100 : Math.max(0, Math.round((before - d.value) * 100) / 100);
+    $('dcPreview').innerHTML = '<b>' + esc(d.desc) + '</b>' + (c.tier !== 'Demo' && before ? '<br>Next renewal: ' + esc(money(before)) + (discOf(c) ? ' (after the ' + discOf(c) + '% referral discount)' : '') + ' &rarr; <b>' + esc(money(after)) + '</b> ' + esc(PERIOD[c.tier] || '') : '') +
+      '<div class="hint">Order: plan price, then referral discount, then this discount, then any one-off manual discount when you log a payment.</div>';
+  }
+  function saveDiscount() {
+    var c = discFor; if (!c) return;
+    $('dcMsg').textContent = '';
+    var o = { on: $('dcOn').checked, mode: dcMode(), type: $('dcType').value, value: $('dcValue').value, until: $('dcUntil').value, count: $('dcCount').value, promo: $('dcPromo').value, note: $('dcNote').value };
+    call('adminSaveDiscount', [c.key, o], function () {
+      show('dcBg', false); var n = byKey(c.key);
+      toast(c.name + ': ' + (o.on ? 'recurring discount saved' + (n && n.discountText ? ' (' + n.discountText + ')' : '') + '.' : 'recurring discount removed.'));
+      if (editing && n && editing.key === n.key) { editing = n; $('eDiscText').innerHTML = discLine(n) || '<span class="em">No recurring discount.</span>'; }
+      discFor = null;
+    }, 'dcMsg');
+  }
+
   var adjustFor = null;
   function openAdjust(p) {
     adjustFor = p;
@@ -1662,6 +1844,23 @@
   $('btnRpSave').addEventListener('click', savePartner);
   $('btnPoSave').addEventListener('click', savePayout);
   $('btnAjSave').addEventListener('click', saveAdjust);
+  $('prq').addEventListener('input', renderPromos);
+  $('btnPromoNew').addEventListener('click', function () { openPromo(null); });
+  $('btnPrSave').addEventListener('click', savePromo);
+  ['prCode', 'prType', 'prValue', 'prMax', 'prExp', 'prApplies', 'prUntil', 'prCount'].forEach(function (id) { $(id).addEventListener('input', syncPromoForm); $(id).addEventListener('change', syncPromoForm); });
+  $('prlist').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button[data-predit]') : null; if (!b) return;
+    var p = (S.promos || []).filter(function (x) { return x.code === b.getAttribute('data-predit'); })[0]; if (p) openPromo(p);
+  });
+  $('prlist').addEventListener('change', function (e) {
+    var code = e.target.getAttribute && e.target.getAttribute('data-pron'); if (!code) return;
+    var on = e.target.checked;
+    call('adminSetPromoActive', [code, on], function () { toast('Promo code ' + code + ' turned ' + (on ? 'on.' : 'off. New clients cannot use it; clients who redeemed it keep their discount.')); });
+    setTimeout(renderPromos, 0);
+  });
+  $('btnEditDisc').addEventListener('click', function () { if (editing) openDiscount(editing); });
+  $('btnDcSave').addEventListener('click', saveDiscount);
+  Array.prototype.forEach.call(document.querySelectorAll('#dcBg input, #dcBg select'), function (el) { el.addEventListener('input', syncDiscount); el.addEventListener('change', syncDiscount); });
   $('ajAmount').addEventListener('input', adjustPreview); $('ajDir').addEventListener('change', adjustPreview);
   $('btnPsNew').addEventListener('click', function () { savePriceScope('new'); });
   $('btnPsAll').addEventListener('click', function () { savePriceScope('all'); });

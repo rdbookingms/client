@@ -633,7 +633,7 @@
       <h4>Resort identity</h4>
       <p class="hint">This name appears on the main menu, the calendar and every receipt.</p>
       <label for="wz_name">Resort name</label><input type="text" id="wz_name" maxlength="60" placeholder="Sunny Cove Resort">
-      <div class="wiz-def">If skipped: "My Resort"</div>
+      <div class="wiz-def" id="wzNameDef">If skipped: "My Resort"</div>
     </div>
 
     <div class="wiz-pg" id="wizP2">
@@ -1038,7 +1038,7 @@
   </div>
 </div>
 
-<script src="app.js?v=f5e1de73ca"></script>
+<script src="app.js?v=9bb2152614"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

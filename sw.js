@@ -8,8 +8,8 @@
  *  - Calls to the booking server (script.google.com) are never cached or touched.
  *  - Pages in sub-folders (the partner page and the Admin panel) are left alone: always loaded fresh.
  */
-const BUILD = '464538325e';
-const ASSETS = ["./","app.css?v=65d4de9ea5","app.js?v=f5e1de73ca","gas-bridge.js?v=fd3a78ecf0","config.js","terms.html","manifest.webmanifest","icon-192.png","icon-512.png","apple-touch-icon.png","favicon-32.png"];
+const BUILD = 'adeb624cf9';
+const ASSETS = ["./","app.css?v=65d4de9ea5","app.js?v=9bb2152614","gas-bridge.js?v=fd3a78ecf0","config.js","terms.html","manifest.webmanifest","icon-192.png","icon-512.png","apple-touch-icon.png","favicon-32.png"];
 const CACHE = 'rdb-' + BUILD;
 const RUNTIME = 'rdb-runtime';
 const CDN_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdnjs.cloudflare.com', 'cdn.jsdelivr.net'];

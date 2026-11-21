@@ -432,7 +432,9 @@
         if (!res || !res.ok) { WZ = null; if (CFG) CFG.setupWizard = false; return; }
         WZ.adm = res.adminToken;
         var rs = RESORTS[res.resort] || {}, D = res.defaults || {};
-        $('wz_name').value = '';
+        WZ.startName = res.resort || 'My Resort';
+        $('wz_name').value = WZ.startName === 'My Resort' ? '' : WZ.startName;      // the business name the sheet was created with
+        $('wzNameDef').textContent = 'If skipped: "' + WZ.startName + '"';
         $('wz_style').value = rs.style === 'Classic' ? 'Classic' : 'Modern';
         $('wz_c1').value = rs.c1 || D.c1 || '#0b93a6'; $('wz_c2').value = rs.c2 || D.c2 || '#7ad45c';
         $('wz_terms').value = rs.terms || D.terms || ''; $('wz_notes').value = rs.notes || D.notes || '';
@@ -456,7 +458,7 @@
   function wizCfg() {
     var rs = RESORTS[DEFAULT_RESORT] || {}, c = {};
     for (var k in rs) c[k] = rs[k];
-    var name = $('wz_name').value.trim() || 'My Resort';
+    var name = $('wz_name').value.trim() || (WZ && WZ.startName) || 'My Resort';
     c.name = name; if (!rs.headerName || rs.headerName === rs.name) c.headerName = name;
     c.style = $('wz_style').value; c.c1 = $('wz_c1').value; c.c2 = $('wz_c2').value;
     c.contactPerson = $('wz_cp').value.trim(); c.phone = $('wz_ph').value.trim(); c.address = $('wz_ad').value.trim(); c.web = $('wz_web').value.trim();
@@ -509,7 +511,7 @@
   function wizStep(how) {
     if (!WZ || WZ.busy) return;
     if (how === 'done') {
-      if (WZ.i === 1 && !$('wz_name').value.trim()) { $('wizMsg').textContent = 'Enter your resort name, or press Skip to use "My Resort".'; $('wz_name').focus(); return; }
+      if (WZ.i === 1 && !$('wz_name').value.trim()) { $('wizMsg').textContent = 'Enter your resort name, or press Skip to use "' + (WZ.startName || 'My Resort') + '".'; $('wz_name').focus(); return; }
       if (WZ.i === 6) {
         var t = [['wz_dIn', 'wz_dOut', 'Day Tour'], ['wz_nIn', 'wz_nOut', 'Overnight']];
         for (var k = 0; k < t.length; k++) if (!$(t[k][0]).value || !$(t[k][1]).value) { $('wizMsg').textContent = t[k][2] + ': choose both a check-in and a check-out time.'; return; }

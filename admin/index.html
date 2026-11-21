@@ -125,7 +125,9 @@
   a.btnlink { display:inline-block; font-weight:700; border-radius:8px; padding:10px 16px; background:var(--teal); color:#fff; text-decoration:none; }
   #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 16px; border-radius:10px; font-weight:700; font-size:13.5px; display:none; z-index:90; max-width:92vw; }
   #toast.bad { background:var(--bad); }
-  #busy { position:fixed; inset:0; background:rgba(255,255,255,.55); display:none; align-items:center; justify-content:center; z-index:80; font-weight:700; cursor:progress; }
+  #busy { position:fixed; inset:0; background:rgba(255,255,255,.55); display:none; align-items:center; justify-content:center; z-index:150; font-weight:700; cursor:progress; }
+  body.is-loading { pointer-events:none; }                 /* loading: nothing can be clicked or typed until the server answers */
+  body.is-loading #busy { pointer-events:auto; }
   #busy div { background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 20px; box-shadow:0 6px 24px rgba(0,0,0,.15); }
   @media (max-width:860px) {
     .tiles { grid-template-columns:1fr 1fr; } .grid2, .grid3, .cols { grid-template-columns:1fr; } .grid5 { grid-template-columns:1fr 1fr; }
@@ -687,7 +689,23 @@
   function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
 
   /* ---------- server calls ---------- */
-  function busy(on) { $('busy').style.display = on ? 'flex' : 'none'; }
+  /* Loading lock: while the server is working every input, select and button is disabled and clicks are blocked
+   * (pointer-events: none). Only the controls this lock disabled are enabled again afterwards. */
+  var busyN = 0, busyLocked = null;
+  function busy(on) {
+    busyN = Math.max(0, busyN + (on ? 1 : -1));
+    var active = busyN > 0;
+    $('busy').style.display = active ? 'flex' : 'none';
+    document.body.classList.toggle('is-loading', active);
+    document.body.setAttribute('aria-busy', active ? 'true' : 'false');
+    if (active && !busyLocked) {
+      busyLocked = [];
+      Array.prototype.forEach.call(document.querySelectorAll('input, select, textarea, button'), function (el) { if (!el.disabled) { el.disabled = true; busyLocked.push(el); } });
+    } else if (!active && busyLocked) {
+      busyLocked.forEach(function (el) { el.disabled = false; }); busyLocked = null;
+    }
+  }
+  function isBusy() { return busyN > 0; }
   var toastT = null;
   function toast(m, bad) {
     var t = $('toast'); t.textContent = m; t.className = bad ? 'bad' : ''; t.style.display = 'block';
@@ -1159,7 +1177,7 @@
   }
   function doLogin() {
     clearTimeout(loginTimer);
-    if ($('lgBg').style.display === 'none' || $('lg_pin').style.display === 'none' || $('busy').style.display === 'flex') return;
+    if ($('lgBg').style.display === 'none' || $('lg_pin').style.display === 'none' || isBusy()) return;
     var pin = $('lgPin').value;
     if (!/^\d{6}$/.test(pin)) { lgMsg('Enter your 6-digit Admin PIN.'); return; }
     lgMsg('');
@@ -1468,14 +1486,50 @@
     ['rvBg', 'poBg', 'rpBg', 'xpBg', 'rjBg', 'dbBg', 'dlBg', 'kyBg', 'pyBg', 'edBg'].some(function (id) { if ($(id).style.display === 'flex') { $(id).style.display = 'none'; return true; } return false; });
   });
 
+  /* ---------- PHONE / BROWSER BACK BUTTON ----------
+   * Back closes the open window first, then goes back through the tabs you visited, then to the Clients tab.
+   * Only from there (or from the login screen) does it leave the page, after "Press back again to exit".
+   * Nothing happens while the panel is loading. */
+  (function () {
+    var tabStack = [], curTab = 'clients', exitArmed = 0, baseShowTab = showTab;
+    showTab = function (name, fromBack) {
+      if (!fromBack && name !== curTab) { tabStack.push(curTab); if (tabStack.length > 30) tabStack.shift(); }
+      curTab = name; baseShowTab(name);
+    };
+    function guard() { try { history.pushState({ laGuard: 1 }, ''); } catch (e) {} }
+    function topModal() {
+      var open = Array.prototype.filter.call(document.querySelectorAll('.bg'), function (b) { return b.style.display === 'flex'; });
+      return open.length ? open[open.length - 1] : null;
+    }
+    function stepBack() {                                     // true = handled inside the panel
+      if (isBusy()) return true;
+      var m = topModal();
+      if (m) { var c = m.querySelector('[data-close]'); if (c) c.click(); else m.style.display = 'none'; return true; }
+      var onLogin = $('lgBg').style.display !== 'none';
+      if (onLogin && $('lg_change').style.display !== 'none' && !lgForced) { $('lgChCancel').click(); return true; }
+      if (onLogin) return false;
+      if (tabStack.length) { showTab(tabStack.pop(), true); return true; }
+      if (curTab !== 'clients') { showTab('clients', true); return true; }
+      return false;
+    }
+    window.addEventListener('popstate', function () {
+      if (stepBack()) { guard(); return; }
+      if (Date.now() - exitArmed < 2500) { exitArmed = 0; history.back(); return; }      // second press: leave
+      exitArmed = Date.now(); toast('Press back again to exit'); guard();
+    });
+    guard();
+    window.LA_stepBack = stepBack;                              // used by the tests
+  })();
+
   /* ---------- events of the new parts ---------- */
   $('btnLogin').addEventListener('click', doLogin);
   var loginTimer;
   $('lgPin').addEventListener('input', function (e) {
     this.value = this.value.replace(/\D/g, '').slice(0, 6); clearTimeout(loginTimer);
-    var value = this.value;
-    if (!e.isComposing && value.length === 6) loginTimer = setTimeout(function () { if ($('lgPin').value === value) doLogin(); }, 140);
+    if (this.value.length < 6 && $('lgMsg').textContent) lgMsg('');
+    if (!e.isComposing && this.value.length === 6) doLogin();          // the 6th digit logs in at once (typed, pasted or autofilled)
   });
+  $('lgPin').addEventListener('compositionend', function () { if (this.value.replace(/\D/g, '').length === 6) { this.value = this.value.replace(/\D/g, '').slice(0, 6); doLogin(); } });
   $('lgPin').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } });
   ['lgOld', 'lgNew1', 'lgNew2'].forEach(function (id) { $(id).addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 6); }); });
   $('lgNew2').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doChangePin(); } });

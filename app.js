@@ -126,9 +126,9 @@
       '<table class="bd booking-details"></table>' +
       '</div>' +
     '<div class="r-foot" style="background:linear-gradient(110deg,' + tintA(c1, .8, .86) + ' 0%,' + tintA(midHex(c1, c2), .8, .86) + ' 50%,' + tintA(c2, .8, .86) + ' 100%)"><div class="r-foot-grid">' +
-      '<div>' + (terms.length ? '<h4>' + esc(cfg.termsHeading || 'Terms and Conditions') + '</h4><ul>' + lis(terms) + '</ul>' : '') + '</div>' +
-      '<div>' + (cfg.deposit ? '<div class="deposit"><div class="t">SECURITY DEPOSIT</div><div class="a">' + esc(cfg.deposit) + '</div></div>' : '') +
-      '<h4>' + esc(cfg.exclHeading || 'Exclusions / Add-ons') + '</h4><ul class="fee-list" id="p_feeList"></ul></div></div>' +
+      '<div class="r-foot-side">' + (cfg.deposit ? '<div class="deposit"><div class="t">SECURITY DEPOSIT</div><div class="a">' + esc(cfg.deposit) + '</div></div>' : '') +
+      '<h4>' + esc(cfg.exclHeading || 'Exclusions / Add-ons') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' +
+      '<div class="r-foot-terms">' + (terms.length ? '<h4>' + esc(cfg.termsHeading || 'Terms and Conditions') + '</h4><ul>' + lis(terms) + '</ul>' : '') + '</div></div>' +
       (cfg.thanks ? '<div class="thanks">' + esc(cfg.thanks) + '</div>' : '') +
       (notes.length ? '<div class="notes"><b>Note:</b><ul>' + lis(notes) + '</ul></div>' : '') +
     '</div>';

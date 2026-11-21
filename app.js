@@ -1943,6 +1943,36 @@
   function admView(v) {
     $('adm_enter').style.display = v === 'enter' ? '' : 'none';
     $('adm_forgot').style.display = v === 'forgot' ? '' : 'none';
+    $('adm_setup').style.display = v === 'setup' ? '' : 'none';
+  }
+  /* First visit with no Admin PIN set: create one (or use the account PIN). Saved on the server and asked for every visit after. */
+  function promptAdminSetup(msg) {
+    admView('setup');
+    $('admNew1').value = $('admNew2').value = ''; admMsg('admSetupMsg', msg || '', 'err');
+    $('admBg').style.display = 'flex';
+    setTimeout(function(){ try { $('admNew1').focus(); } catch (e) {} }, 50);
+  }
+  function doAdminSetup(mode) {
+    if ($('btnAdmSetupSave').disabled || $('btnAdmUseAccount').disabled) return;
+    var p1 = $('admNew1').value, p2 = $('admNew2').value;
+    if (mode !== 'account') {
+      if (!/^\d{6}$/.test(p1)) { admMsg('admSetupMsg', 'The Admin PIN must be exactly 6 digits.', 'err'); return; }
+      if (p1 !== p2) { admMsg('admSetupMsg', 'The two PINs do not match.', 'err'); return; }
+    }
+    var btn = mode === 'account' ? $('btnAdmUseAccount') : $('btnAdmSetupSave');
+    setBusy(btn, true, 'Saving...'); $('btnAdmSetupSave').disabled = $('btnAdmUseAccount').disabled = true;
+    RUN
+      .withSuccessHandler(function(res){
+        setBusy(btn, false); $('btnAdmSetupSave').disabled = $('btnAdmUseAccount').disabled = false;
+        if (res.ok) {
+          CFG.adminNeedsSetup = false; ADMIN_TOKEN = res.adminToken; $('admBg').style.display = 'none';
+          showScreen('admin'); loadAdmin();
+          menuNote(res.usesAccount ? 'Admin Settings now open with your Account PIN.' : 'Admin PIN saved. You will be asked for it each time you open Admin Settings.');
+        } else if (res.already) { CFG.adminNeedsSetup = false; promptAdmin(res.message); }
+        else admMsg('admSetupMsg', res.message, 'err');
+      })
+      .withFailureHandler(function(e){ setBusy(btn, false); $('btnAdmSetupSave').disabled = $('btnAdmUseAccount').disabled = false; if (authFail(e)) return; admMsg('admSetupMsg', 'Could not save: ' + e.message, 'err'); })
+      .adminSetupPin(TOKEN, mode, mode === 'account' ? '' : p1);
   }
   function promptAdmin(msg) {
     admView('enter');
@@ -1952,7 +1982,7 @@
   }
   function openAdmin() {
     if (!CFG_READY) { menuNote('Still loading the settings. Please try again in a moment.'); return; }
-    if (ADMIN_TOKEN) { showScreen('admin'); loadAdmin(); } else promptAdmin('');
+    if (ADMIN_TOKEN) { showScreen('admin'); loadAdmin(); } else if (CFG.adminNeedsSetup === true && !PROVIDER) promptAdminSetup(''); else promptAdmin('');
   }
   function doAdminUnlock() {
     clearTimeout(pinAutoTimers.admPw);
@@ -1964,6 +1994,7 @@
       .withSuccessHandler(function(res){
         setBusy($('btnAdmGo'), false);
         if (res.ok) { ADMIN_TOKEN = res.adminToken; $('admBg').style.display = 'none'; showScreen('admin'); loadAdmin(); }
+        else if (res.needsSetup) { CFG.adminNeedsSetup = true; promptAdminSetup(''); }
         else { admMsg('admPwMsg', res.message, 'err'); $('admPw').value = ''; }
       })
       .withFailureHandler(function(e){ setBusy($('btnAdmGo'), false); if (authFail(e)) return; admMsg('admPwMsg', 'Could not check the PIN: ' + e.message, 'err'); })
@@ -2175,6 +2206,7 @@
   // ----- security -----
   function renderSec() {
     $('secDefault').style.display = admData && admData.adminIsDefault ? '' : 'none';
+    $('secAccount').style.display = admData && admData.adminUsesAccount ? '' : 'none';
     if (admOwnerMasked) $('secEmail').textContent = admOwnerMasked;
   }
 
@@ -3121,7 +3153,11 @@
       admMsg('secMsg', 'The Admin PIN was changed. Use the new one next time.', 'ok');
     });
   });
-  ['secCode', 'secPin1', 'secPin2', 'fgCode', 'fgPin1', 'fgPin2'].forEach(function(id){ $(id).addEventListener('input', function(){ this.value = this.value.replace(/\D/g, '').slice(0, 6); }); });
+  $('btnAdmSetupSave').addEventListener('click', function(){ doAdminSetup('new'); });
+  $('btnAdmUseAccount').addEventListener('click', function(){ doAdminSetup('account'); });
+  $('btnAdmSetupCancel').addEventListener('click', function(){ $('admBg').style.display = 'none'; });
+  $('admNew2').addEventListener('keydown', function(e){ if (e.key === 'Enter') doAdminSetup('new'); });
+  ['secCode', 'secPin1', 'secPin2', 'fgCode', 'fgPin1', 'fgPin2', 'admNew1', 'admNew2'].forEach(function(id){ $(id).addEventListener('input', function(){ this.value = this.value.replace(/\D/g, '').slice(0, 6); }); });
   $('admTabs').addEventListener('click', function(e){ var t = e.target.getAttribute && e.target.getAttribute('data-tab'); if (t) showAdminTab(t); });
   $('admResort').addEventListener('change', function(){
     if (admDirty.times || admDirty.fees) {

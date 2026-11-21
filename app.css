@@ -412,6 +412,8 @@
   .tb[data-b=off] li { padding-left:0; }
   .tb[data-b=off] li::before { content:none; }
   .notes .tb li { margin-bottom:3px; }
+  .adm-or { display:flex; align-items:center; gap:10px; margin:14px 0 10px; color:var(--muted); font-size:12.5px; }
+  .adm-or::before, .adm-or::after { content:''; flex:1; border-top:1px solid #dbe5e7; }
   .bl-row { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:10px 0 4px; }
   .bl-row label.bl-on { display:flex; align-items:center; gap:8px; margin:0; font-weight:600; }
   .bl-row label.bl-on input { width:20px; height:20px; margin:0; }

@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=17de477ac9">
+<link rel="stylesheet" href="app.css?v=b99eec5982">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -435,6 +435,7 @@
       <div class="panel adm-sec">
         <h3>Admin PIN</h3>
         <div class="adm-shared" id="secDefault" style="display:none;background:#fff3d6;color:#7a4a00;font-weight:600;margin:0 0 12px">You are still using the default Admin PIN. Please change it now so only you can open the Admin Settings.</div>
+        <div class="adm-shared" id="secAccount" style="display:none;margin:0 0 12px">Admin Settings open with your Account (sign-in) PIN. To use a separate Admin PIN, set one below with the emailed code.</div>
         <p class="hint">The Admin PIN opens these settings and is also used to reset the booking PIN. To change it, a 6-digit code is emailed to <b id="secEmail">the email of this Google Sheet</b> first, so only the sheet owner can do it.</p>
         <div class="adm-actions"><button class="ghost" id="btnSecSend" type="button">Email me a code</button></div>
         <div id="secStep2" style="display:none;margin-top:12px">
@@ -630,6 +631,20 @@
         <button class="primary" id="btnAdmGo" type="button">Continue</button>
       </div>
       <a class="pin-back" id="lnkAdmForgot" style="display:block;text-align:center">Forgot the Admin PIN?</a>
+    </div>
+    <div id="adm_setup" style="display:none">
+      <h3 class="ok">Create your Admin PIN</h3>
+      <p>Admin Settings are protected by an Admin PIN. Create a 6-digit PIN now &mdash; it will be asked for every time you open Admin Settings.</p>
+      <label for="admNew1">New Admin PIN (6 digits)</label><input id="admNew1" type="password" inputmode="numeric" maxlength="6" pattern="[0-9]*" autocomplete="new-password">
+      <label for="admNew2">Confirm Admin PIN</label><input id="admNew2" type="password" inputmode="numeric" maxlength="6" pattern="[0-9]*" autocomplete="new-password">
+      <div class="adm-msg err" id="admSetupMsg"></div>
+      <div class="btns">
+        <button class="ghost" id="btnAdmSetupCancel" type="button">Cancel</button>
+        <button class="primary" id="btnAdmSetupSave" type="button">Save Admin PIN</button>
+      </div>
+      <div class="adm-or"><span>or</span></div>
+      <button class="ghost" id="btnAdmUseAccount" type="button" style="width:100%">Use my Account PIN</button>
+      <p class="hint" style="margin:6px 0 0;font-size:12.5px">Your sign-in PIN will also open Admin Settings (it follows any later change of your sign-in PIN). You can switch to a separate Admin PIN any time in Admin Settings &gt; Security.</p>
     </div>
     <div id="adm_forgot" style="display:none">
       <h3 class="ok">Reset the Admin PIN</h3>
@@ -946,7 +961,7 @@
   </div>
 </div>
 
-<script src="app.js?v=8eca3afdf6"></script>
+<script src="app.js?v=c8d2cb86fb"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

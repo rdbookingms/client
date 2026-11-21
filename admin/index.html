@@ -88,6 +88,7 @@
   .dmode label b { font-weight:700; } .dmode input { width:auto; margin-top:3px; }
   @media (max-width:560px) { .dmode { grid-template-columns:minmax(0,1fr); } }
   .b-disc { background:#e8f5e9; color:#1b6b30; }
+  .prplans { display:flex; flex-wrap:wrap; gap:6px 18px; } .prplans label.chk { margin:0; }
   .badge { display:inline-block; border-radius:20px; padding:3px 10px; font-size:12px; font-weight:700; white-space:nowrap; }
   .b-ok { background:var(--ok-bg); color:var(--ok); } .b-warn { background:var(--warn-bg); color:var(--warn); }
   .b-bad { background:var(--bad-bg); color:var(--bad); } .b-off { background:var(--off-bg); color:var(--off); }
@@ -657,6 +658,14 @@
       <div id="prUntilW"><label for="prUntil">Discount ends on</label><input id="prUntil" type="date"></div>
       <div id="prCountW"><label for="prCount">Number of payments</label><input id="prCount" type="number" min="1" max="120" step="1" value="3"></div>
     </div>
+    <label>Can be used on these plans</label>
+    <div class="prplans" id="prPlans">
+      <label class="chk"><input type="checkbox" value="Monthly" checked> Monthly</label>
+      <label class="chk"><input type="checkbox" value="Quarterly" checked> Quarterly</label>
+      <label class="chk"><input type="checkbox" value="Yearly" checked> Yearly</label>
+      <label class="chk"><input type="checkbox" value="Lifetime" checked> Lifetime</label>
+    </div>
+    <div class="hint">The discount is taken off only when the client pays for one of these plans. Other plans are charged in full and do not use up the promo's payments.</div>
     <label for="prTerms">Promo terms (shown to the client when they apply the code)</label><textarea id="prTerms" rows="2" maxlength="500" placeholder="New clients only. Cannot be exchanged for cash."></textarea>
     <label class="chk"><input id="prActive" type="checkbox" checked> On (new clients can use this code)</label>
     <div class="keybox" id="prPreview" style="border-style:solid"></div>
@@ -801,11 +810,11 @@
   function clientDiscOf(c) { return c && c.rates && c.rates.clientDisc ? c.rates.clientDisc : null; }
   function totalOf(c, tier) {          // per period, after the referral discount and the client's recurring discount
     var t = totalNoClientDisc(c, tier), d = clientDiscOf(c);
-    if (d && tier !== 'Demo' && t > 0) t = d.type === 'pct' ? Math.round(t * (1 - d.value / 100) * 100) / 100 : Math.max(0, Math.round((t - d.value) * 100) / 100);
+    if (d && tier !== 'Demo' && (!d.tiers || !d.tiers.length || d.tiers.indexOf(tier) >= 0) && t > 0) t = d.type === 'pct' ? Math.round(t * (1 - d.value / 100) * 100) / 100 : Math.max(0, Math.round((t - d.value) * 100) / 100);
     return t;
   }
   function grossFor(c, tier, n) {       // n periods: a 'for N renewals' discount covers only the renewals left
-    var d = clientDiscOf(c), k = !d || tier === 'Demo' ? 0 : d.mode === 'count' ? Math.min(n, d.left) : n;
+    var d = clientDiscOf(c), k = !d || tier === 'Demo' || (d.tiers && d.tiers.length && d.tiers.indexOf(tier) < 0) ? 0 : d.mode === 'count' ? Math.min(n, d.left) : n;
     return Math.round((totalOf(c, tier) * k + totalNoClientDisc(c, tier) * (n - k)) * 100) / 100;
   }
   function discLine(c) {
@@ -1544,10 +1553,13 @@
   }
   /* ---------- Promotions tab ---------- */
   var promoEditing = null;
+  function plansText(t) { if (!t || !t.length) return ''; return t.length === 1 ? t[0] : t.slice(0, -1).join(', ') + ' and ' + t[t.length - 1]; }
   function promoText(p) {
     var amt = p.type === 'pct' ? p.value + '%' : money(p.value);
-    return amt + ' off ' + (p.appliesTo === 'first' ? 'the first payment' : p.appliesTo === 'life' ? 'every renewal' : p.appliesTo === 'until' ? 'every payment until ' + nice(p.until) : 'the first ' + p.payments + ' payments');
+    return amt + ' off ' + (p.appliesTo === 'first' ? 'the first payment' : p.appliesTo === 'life' ? 'every renewal' : p.appliesTo === 'until' ? 'every payment until ' + nice(p.until) : 'the first ' + p.payments + ' payments') +
+      (p.tiers && p.tiers.length ? ' on ' + plansText(p.tiers) + ' plans' : '');
   }
+  function promoPlansPicked() { return Array.prototype.filter.call(document.querySelectorAll('#prPlans input'), function (x) { return x.checked; }).map(function (x) { return x.value; }); }
   function renderPromos() {
     var L = S.promos || [], q = ($('prq').value || '').trim().toLowerCase();
     var rows = L.filter(function (p) { return !q || (p.code + ' ' + p.terms).toLowerCase().indexOf(q) >= 0; });
@@ -1569,7 +1581,9 @@
     $('prValueL').textContent = $('prType').value === 'pct' ? 'Percentage (%)' : 'Amount (' + (S.config.currency || '') + ')';
     $('prDurBox').style.display = a === 'until' || a === 'count' ? '' : 'none';
     $('prUntilW').style.display = a === 'until' ? '' : 'none'; $('prCountW').style.display = a === 'count' ? '' : 'none';
-    var p = { type: $('prType').value, value: Number($('prValue').value) || 0, appliesTo: a, until: $('prUntil').value, payments: Number($('prCount').value) || 1 };
+    var picked = promoPlansPicked();
+    var p = { type: $('prType').value, value: Number($('prValue').value) || 0, appliesTo: a, until: $('prUntil').value, payments: Number($('prCount').value) || 1, tiers: picked.length === 4 ? [] : picked };
+    if (!picked.length) { $('prPreview').innerHTML = '<span style="color:var(--bad)">Choose at least one plan.</span>'; return; }
     $('prPreview').innerHTML = p.value > 0 ? 'Clients who register with <b>' + esc(($('prCode').value || 'this code').toUpperCase()) + '</b> get <b>' + esc(promoText(p)) + '</b>' +
       ($('prMax').value ? ', for up to ' + esc($('prMax').value) + ' sign-ups' : '') + ($('prExp').value ? ', until the code expires on ' + esc(nice($('prExp').value)) : '') + '.' : 'Type the discount value.';
   }
@@ -1580,13 +1594,16 @@
     $('prMax').value = p && p.max ? p.max : ''; $('prExp').value = p ? p.expires : ''; $('prApplies').value = p ? p.appliesTo : 'first';
     $('prUntil').value = p ? p.until : ''; $('prCount').value = p && p.appliesTo === 'count' ? p.payments : 3; $('prTerms').value = p ? p.terms : '';
     $('prActive').checked = p ? p.active : true; $('prMsg').textContent = '';
+    Array.prototype.forEach.call(document.querySelectorAll('#prPlans input'), function (x) { x.checked = !p || !p.tiers || !p.tiers.length || p.tiers.indexOf(x.value) >= 0; });
     $('prCode').disabled = !!(p && p.redeemed);
     syncPromoForm(); show('prBg', true); setTimeout(function () { (p ? $('prValue') : $('prCode')).focus(); }, 50);
   }
   function savePromo() {
     $('prMsg').textContent = '';
     var o = { original: promoEditing ? promoEditing.code : '', code: $('prCode').value, type: $('prType').value, value: $('prValue').value, max: $('prMax').value,
-              expires: $('prExp').value, appliesTo: $('prApplies').value, until: $('prUntil').value, payments: $('prCount').value, terms: $('prTerms').value, active: $('prActive').checked };
+              expires: $('prExp').value, appliesTo: $('prApplies').value, until: $('prUntil').value, payments: $('prCount').value, terms: $('prTerms').value, active: $('prActive').checked,
+              tiers: promoPlansPicked() };
+    if (!o.tiers.length) { $('prMsg').textContent = 'Choose at least one plan this promo code can be used on.'; return; }
     call('adminSavePromo', [o], function (v) { show('prBg', false); toast('Promo code ' + v.promoCode + (promoEditing ? ' saved.' : ' created.')); promoEditing = null; }, 'prMsg');
   }
   /* ---------- per-client recurring discount ---------- */
@@ -1848,6 +1865,7 @@
   $('btnPromoNew').addEventListener('click', function () { openPromo(null); });
   $('btnPrSave').addEventListener('click', savePromo);
   ['prCode', 'prType', 'prValue', 'prMax', 'prExp', 'prApplies', 'prUntil', 'prCount'].forEach(function (id) { $(id).addEventListener('input', syncPromoForm); $(id).addEventListener('change', syncPromoForm); });
+  Array.prototype.forEach.call(document.querySelectorAll('#prPlans input'), function (x) { x.addEventListener('change', syncPromoForm); });
   $('prlist').addEventListener('click', function (e) {
     var b = e.target.closest ? e.target.closest('button[data-predit]') : null; if (!b) return;
     var p = (S.promos || []).filter(function (x) { return x.code === b.getAttribute('data-predit'); })[0]; if (p) openPromo(p);

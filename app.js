@@ -40,7 +40,7 @@
       if (name === 'withFailureHandler') return function(fn){ return makeRun({ok: h.ok, fail: fn}); };
       return function() {
         var initiatingToken = TOKEN, sessionScoped = !!initiatingToken && arguments[0] === initiatingToken;
-        var id = ['checkInvoice', 'getNextInvoiceNo', 'getPublicCalendar'].indexOf(name) < 0 ? busyStart(name) : null, r = google.script.run
+        var id = ['checkInvoice', 'getNextInvoiceNo', 'getPublicCalendar', 'getImages'].indexOf(name) < 0 ? busyStart(name) : null, r = google.script.run
           .withSuccessHandler(function(v){ busyDone(id); if (sessionScoped && TOKEN !== initiatingToken) return; if (h.ok) h.ok(v); })
           .withFailureHandler(function(e){ busyDone(id); if (sessionScoped && TOKEN !== initiatingToken) return; if (h.fail) h.fail(e); else if (window.console) console.error(e); });
         return r[name].apply(r, arguments);
@@ -358,7 +358,49 @@
     $('mode').value = cur;
     PROOF_MODES = CFG.settings.proofModes || [];
   }
+  /* ---------- IMAGE MEMORY (faster sign-in) ----------
+   * Logos and backgrounds are kept in this browser (by their Drive file id; a new upload gets a new id), so a sign-in
+   * does not download them again. Pictures the server has not got ready are fetched after the app is already open. */
+  var IMG_PREFIX = 'rdimg_';
+  function imgStoreGet_(id) { try { return id ? localStorage.getItem(IMG_PREFIX + id) : null; } catch (e) { return null; } }
+  function imgStorePut_(id, data) {
+    if (!id || typeof data !== 'string' || data.indexOf('data:image/') !== 0) return;
+    try { if (localStorage.getItem(IMG_PREFIX + id) !== data) localStorage.setItem(IMG_PREFIX + id, data); } catch (e) {}   // full storage: just not remembered
+  }
+  function imgStoreIds_() {
+    var out = [];
+    try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf(IMG_PREFIX) === 0) out.push(k.slice(IMG_PREFIX.length)); } } catch (e) {}
+    return out.slice(0, 60);
+  }
+  function imgOpts_() { return { lazyImg: true, have: imgStoreIds_() }; }
+  function imgHydrate_(cfg) {
+    var keep = {};
+    function one(obj, dataKey, idKey) {
+      var id = obj && obj[idKey]; if (!id) return; keep[id] = 1;
+      if (obj[dataKey]) imgStorePut_(id, obj[dataKey]); else { var d = imgStoreGet_(id); if (d) obj[dataKey] = d; }
+    }
+    one(cfg, 'businessLogo', 'businessLogoId');
+    (cfg.resorts || []).forEach(function(r){ one(r, 'logo', 'logoId'); one(r, 'bg', 'bgId'); });
+    if (cfg.businessLogoId !== undefined) {       // forget pictures this business no longer uses
+      try { imgStoreIds_().forEach(function(id){ if (!keep[id]) localStorage.removeItem(IMG_PREFIX + id); }); } catch (e) {}
+    }
+  }
+  function loadPendingImages_(cfg) {
+    var ids = (cfg.pendingImages || []).filter(function(id){ return !imgStoreGet_(id); });
+    if (!ids.length || !TOKEN || !(window.google && google.script)) return;
+    var token = TOKEN;
+    RUN.withSuccessHandler(function(map){
+        if (TOKEN !== token || !map) return;
+        Object.keys(map).forEach(function(id){ imgStorePut_(id, map[id]); });
+        if (CFG.businessLogoId && map[CFG.businessLogoId]) CFG.businessLogo = map[CFG.businessLogoId];
+        (CFG.resorts || []).forEach(function(r){ if (r.logoId && map[r.logoId]) r.logo = map[r.logoId]; if (r.bgId && map[r.bgId]) r.bg = map[r.bgId]; });
+        if ($('resort').value) { mountReceipt($('receipt'), $('resort').value); update(); fitPreview(); }
+      })
+      .withFailureHandler(function(){})
+      .getImages(token, ids);
+  }
   function applyConfig(cfg) {
+    imgHydrate_(cfg);
     if (cfg.license) renderSub(cfg.license);
     CFG = cfg; CUR = cfg.settings.currency || '₱';
     RESORTS = {};
@@ -368,6 +410,7 @@
     if ($('resort').value) { applyResortUI(); mountReceipt($('receipt'), $('resort').value); }
     CFG_READY = true;
     renderUpcomingSummary(); renderBanner(); renderClientReferral(LIC && LIC.referral);
+    loadPendingImages_(cfg);
   }
   function loadConfig(cb) {
     if (!(window.google && google.script)) return;
@@ -2924,7 +2967,7 @@
       var token = TOKEN;
       RUN.withSuccessHandler(function(bundle){ if (TOKEN !== token) return; applySessionBootstrap(bundle); })
         .withFailureHandler(function(e){if (TOKEN !== token) return; sessionLoading=false;if (!authFail(e)) menuNote('Could not load the app: '+e.message,true);})
-        .getSessionBootstrap(token);
+        .getSessionBootstrap(token, imgOpts_());
     } else {      // opened outside Google (local preview only): a single sample resort, no data
       applyConfig({settings: CFG.settings, defaultResort: 'My Resort', resorts: [{name:'My Resort', active:true, style:'Modern', headerName:'My Resort', title:'BOOKING CONFIRMATION',
         contactPerson:'', phone:'', address:'', web:'', c1:'#0b93a6', c2:'#7ad45c', terms:'Full payment must be settled upon arrival.', notes:'', deposit:'', exclHeading:'Exclusions / Add-ons', thanks:'THANK YOU', termsHeading:'Terms and Conditions',
@@ -2949,7 +2992,7 @@
         else { pinMsg(res.message, 'err'); $('pinEnter').value = ''; $('pinEnter').focus(); }
       })
       .withFailureHandler(function(e){ if (attempt !== pinAttemptSeq || key !== LKEY) return; setBusy($('btnUnlock'), false); pinChecking = false; syncPinEntry(); pinMsg('Could not check the PIN: ' + e.message, 'err'); })
-      .verifyPin(pin, LKEY, true);
+      .verifyPin(pin, LKEY, true, imgOpts_());
   }
   function doChange() {
     var o = $('pinOld').value, n1 = $('pinNew1').value, n2 = $('pinNew2').value;

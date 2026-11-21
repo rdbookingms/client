@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=df64651f23">
+<link rel="stylesheet" href="app.css?v=1ba9be4580">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -696,10 +696,10 @@
       <h2>Invoice numbering</h2><div class="row"><div><label for="re_invMode">Numbering for this resort</label><select id="re_invMode"><option>Random</option><option>Manual</option><option>Continuous</option></select></div><div><label for="re_invPrefix">Resort prefix (optional)</label><input id="re_invPrefix" maxlength="12" placeholder="Business prefix"></div></div><label for="re_invNext">Next continuous number</label><input id="re_invNext" type="number" min="1" max="99999999" step="1" value="1"><p class="hint">Continuous numbers are allocated when you save. A distinct prefix for each resort keeps its sequence independent. Existing bookings keep their invoice number.</p>
       <h2>Fields on booking confirmations</h2><p class="hint">Choose fields to show on this resort's preview and downloaded confirmation. Records keep all fields.</p><div id="re_visibleFields" class="field-options"></div>
       <h2>Required booking fields</h2><p class="hint">Ticked fields must be filled in before a booking can be saved. Untick a field to make it optional for this resort. Invoice No. is only typed (and only required) when this resort's numbering is Manual.</p><div id="re_requiredFields" class="field-options"></div>
-      <h2>Custom booking fields</h2><p class="hint">Enable each field for this resort's booking form and confirmation, then customize its label. Choose its position in the booking details table below. Values are optional and saved with the booking.</p>
+      <h2>Custom booking fields</h2><p class="hint">Enable each field for this resort's booking form and confirmation, then customize its label. Set its place in the booking details table order below. Values are optional and saved with the booking.</p>
       <div id="re_customFields"></div>
       <label class="custom-hide-empty"><input type="checkbox" id="re_customHideEmpty"> Automatically hide empty custom fields on confirmations</label>
-      <h2>Booking details table layout</h2><p class="hint" id="re_layoutHint">Arrange every field in the booking details table. Use the arrows to change the order. Col 1 or Col 2 fills that side of the last row when it is free; Full Row spans the table. Hidden or empty fields do not take a slot.</p>
+      <h2>Booking details table layout</h2><p class="hint" id="re_layoutHint">Set the order of the fields in the booking details table with the arrows. Visible fields fill the table two per row in this order; hidden or empty fields are skipped and the next ones move up. If one field is left over, it spans the full row.</p>
       <div id="re_tableLayout" class="table-layout" role="list" aria-label="Booking details table fields"></div>
       <button type="button" class="ghost sm" id="re_layoutReset">Reset this style to the default layout</button>
       <h2>Contact on the receipt</h2>
@@ -943,7 +943,7 @@
   </div>
 </div>
 
-<script src="app.js?v=2e2bf8282b"></script>
+<script src="app.js?v=e4017a42ef"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

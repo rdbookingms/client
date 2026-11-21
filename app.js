@@ -167,7 +167,7 @@
     renderBookingDetails(root, cfg);
     applyReceiptVisibility(root, cfg);
   }
-  /* ---------- booking-details table: ordered Col 1 / Col 2 / Full Row placement for primary and custom fields ---------- */
+  /* ---------- booking-details table: fields in the saved order, two per row (see layoutBookingDetails) ---------- */
   var TABLE_LAYOUTS = ['col1','col2','full'];
   var TABLE_LAYOUT_NAMES = {col1:'Col 1 (last row)',col2:'Col 2 (last row)',full:'Full Row'};
   var TABLE_FIELD_DEFAULTS = {
@@ -235,26 +235,30 @@
     root._detailCells = cells; root._detailOrder = order; root._detailHide = (cfg.hide || []).slice();
     layoutBookingDetails(root);
   }
-  // Hidden fields (switched off, or empty custom fields with auto-hide) never take a slot; Col 1 / Col 2 fill that side of the last row when free.
+  /* Always a complete box, no empty cells:
+   *  1. hidden fields (switched off, or empty custom fields with auto-hide) are taken out first;
+   *  2. the visible fields keep the saved order (Admin Settings > resort > Booking details table order) and fill
+   *     the rows two at a time, left then right, so the fields after a hidden one move up into its place;
+   *  3. when the visible count is odd, the last field spans the whole row (colspan). */
   function layoutBookingDetails(root) {
     var cells = root._detailCells, options = root._customFieldConfig, table = root.querySelector('table.booking-details');
     if (!cells || !options || !table) return;
-    var rows = [], hidden = [];
+    var rows = [], hidden = [], pending = null;
     root._detailOrder.forEach(function(key){
       var c = cells[key];
       var show = c.custom ? options[key].visible && !(options.autoHideEmpty && !c.v.textContent.trim()) : root._detailHide.indexOf(key) < 0;
       if (!show) { hidden.push(key); return; }
-      if (c.layout === 'full') { rows.push({full:key}); return; }
-      var last = rows[rows.length - 1];
-      if (!last || last.full || last[c.layout]) { last = {}; rows.push(last); }
-      last[c.layout] = key;
+      if (!pending) { pending = key; return; }
+      rows.push({col1:pending, col2:key}); pending = null;
     });
+    if (pending) rows.push({full:pending});
     var shown = document.createElement('tbody'), stash = document.createElement('tbody');
     shown.className = 'booking-details-rows'; stash.className = 'booking-details-hidden'; stash.hidden = true;
     function place(tr, key, span, second) {
       var c = cells[key];
       c.k.classList.toggle('slot2', !!second);
       if (span) c.v.colSpan = span; else c.v.removeAttribute('colspan');
+      c.v.classList.toggle('span-all', !!span);                // the left-over field fills the rest of the row
       tr.appendChild(c.k); tr.appendChild(c.v);
     }
     function blank(tr) { var td = document.createElement('td'); td.className = 'custom-receipt-placeholder'; td.colSpan = 2; td.setAttribute('aria-hidden', 'true'); tr.appendChild(td); }
@@ -2228,13 +2232,12 @@
   function renderTableLayoutEditor(focusKey, focusAction) {
     if (!resEd || !resEd.layout) return;
     var styleName = $('re_style').value === 'Classic' ? 'Classic' : 'Modern', list = resEd.layout[tableStyleKey(styleName)];
-    $('re_layoutHint').textContent = 'Arrange every field in the ' + styleName + ' booking details table. Use the arrows to change the order. Col 1 or Col 2 fills that side of the last row when it is free; Full Row spans the table. Hidden or empty fields do not take a slot. Each receipt style keeps its own layout.';
+    $('re_layoutHint').textContent = 'Set the order of the fields in the ' + styleName + ' booking details table with the arrows. Visible fields fill the table two per row in this order; hidden or empty fields are skipped and the next ones move up. If one field is left over, it spans the full row. Each receipt style keeps its own order.';
     $('re_tableLayout').innerHTML = list.map(function(item, i){
       var n = tableLayoutEditorName(item.key), hid = tableLayoutEditorHidden(item.key), id = 'tl_' + item.key;
       return '<div class="table-layout-row' + (hid ? ' is-hidden' : '') + '" role="listitem" data-layout-key="' + item.key + '">' +
         '<span class="pos">' + (i + 1) + '</span>' +
-        '<label class="nm" for="' + id + '">' + esc(n.label) + (hid ? '<span class="tag">' + esc(hid) + '</span>' : '') + (n.sub ? '<small>' + esc(n.sub) + '</small>' : '') + '</label>' +
-        '<select id="' + id + '" data-layout-select="' + item.key + '">' + TABLE_LAYOUTS.map(function(v){ return '<option value="' + v + '"' + (item.layout === v ? ' selected' : '') + '>' + TABLE_LAYOUT_NAMES[v] + '</option>'; }).join('') + '</select>' +
+        '<span class="nm" id="' + id + '">' + esc(n.label) + (hid ? '<span class="tag">' + esc(hid) + '</span>' : '') + (n.sub ? '<small>' + esc(n.sub) + '</small>' : '') + '</span>' +
         '<span class="mv"><button type="button" class="ghost" data-layout-move="-1" data-layout-for="' + item.key + '" aria-label="Move ' + attr(n.label) + ' up"' + (i === 0 ? ' disabled' : '') + '>&#9650;</button>' +
         '<button type="button" class="ghost" data-layout-move="1" data-layout-for="' + item.key + '" aria-label="Move ' + attr(n.label) + ' down"' + (i === list.length - 1 ? ' disabled' : '') + '>&#9660;</button></span></div>';
     }).join('');

@@ -384,6 +384,7 @@
   table.rp-details td.k { background:transparent; color:#4a5f65; font-size:13.5px; font-weight:600; padding-right:8px; }
   table.rp-details td.v { background:transparent; border-bottom:1.5px solid #6f878d; font-weight:700; padding-bottom:1px; overflow-wrap:anywhere; }
   table.rp-details td.slot2 { padding-left:30px; }
+  table.bd td.v.span-all { width:auto; }
   table.rp-details td.money { font-size:15.5px; }
   table.rp-details td.bal { background:#fff5d9; padding:2px 6px; }
   .r-foot { background:linear-gradient(110deg,rgba(201,243,221,.82) 0%,rgba(179,220,238,.82) 50%,rgba(157,188,247,.82) 100%); padding:22px 36px 18px; margin-top:18px; }
@@ -528,7 +529,7 @@
   .custom-field-setting label { margin:0; }
   .custom-receipt-placeholder { background:transparent; }
   .table-layout { border:1px solid #d7e3e6; border-radius:10px; overflow:hidden; }
-  .table-layout-row { display:grid; grid-template-columns:28px minmax(0,1fr) 165px 76px; gap:10px; align-items:center; padding:7px 10px; border-bottom:1px solid #e3ecee; background:#fff; }
+  .table-layout-row { display:grid; grid-template-columns:28px minmax(0,1fr) 76px; gap:10px; align-items:center; padding:7px 10px; border-bottom:1px solid #e3ecee; background:#fff; }
   .table-layout-row:last-child { border-bottom:0; }
   .table-layout-row.is-hidden { background:#f6f9fa; }
   .table-layout-row .pos { font-size:12px; font-weight:700; color:var(--muted); text-align:center; }

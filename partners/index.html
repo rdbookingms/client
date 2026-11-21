@@ -201,9 +201,10 @@
   function nice(s) { if (!s) return ''; var p = String(s).split('-'); return p.length === 3 ? MON[+p[1] - 1] + ' ' + (+p[2]) + ', ' + p[0] : s; }
   function money(n) {
     n = Math.round((Number(n) || 0) * 100) / 100;
+    var neg = n < 0; n = Math.abs(n);
     var p = (n % 1 === 0 ? String(n) : n.toFixed(2)).split('.');
     p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return ((D && D.currency) || (INFO && INFO.currency) || '') + p.join('.');
+    return (neg ? '\u2212' : '') + ((D && D.currency) || (INFO && INFO.currency) || '') + p.join('.');
   }
   function busy(on) { $('busy').style.display = on ? 'flex' : 'none'; }
   var toastT = null;

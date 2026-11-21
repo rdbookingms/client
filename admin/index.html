@@ -461,7 +461,7 @@
       <div><label for="eEmail">Registered email</label><input id="eEmail" type="email" maxlength="120" placeholder="client@gmail.com"></div>
       <div><label for="ePhone">Phone (optional)</label><input id="ePhone" type="tel" maxlength="40"></div>
     </div>
-    <div class="hint">The client's own email address. PIN reset codes go there, and a Google account with this address gets view-only access to their booking sheet (which lives in your Google Drive).</div>
+    <div class="hint">The client's own email address. Their license key and PIN reset codes go there. Their booking sheet stays private in your Google Drive; they use it only through the app.</div>
     <label for="eExtra">Extra emails (optional - only checked by per-client copies with Google sign-in)</label><input id="eExtra" maxlength="400" placeholder="staff1@gmail.com, staff2@gmail.com">
     <div class="grid3">
       <div><label for="eTier">Tier</label><select id="eTier"></select></div>
@@ -473,6 +473,12 @@
     <label class="chk"><input id="eFreeResorts" type="checkbox"> Unlimited resorts at no extra charge</label>
     <div class="hint">Exempts this client from all extra-resort fees and approval limits. Existing resorts and approved counts are retained.</div>
     <div class="hint" id="eXrHint"></div>
+    <label class="chk"><input id="eLegacy" type="checkbox"> Legacy Pricing (keeps their own rates when you change the price list)</label>
+    <div class="grid2" id="eLegacyBox">
+      <div><label for="eLegacyPrice">Custom base subscription price (<span id="eLegacyTier"></span>)</label><input id="eLegacyPrice" inputmode="decimal"></div>
+      <div><label for="eLegacyFee">Extra resort fee per month</label><input id="eLegacyFee" inputmode="decimal"></div>
+    </div>
+    <div class="hint" id="eLegacyHint"></div>
     <label for="eRefBy">Referred by (referral code of a client or partner, optional)</label><input id="eRefBy" maxlength="12" style="max-width:200px;text-transform:uppercase" autocomplete="off">
     <div class="hint" id="eRefHint"></div>
     <label class="chk"><input id="eRefExcluded" type="checkbox"> Exclude this client from the referral program</label>
@@ -512,6 +518,8 @@
     <div class="keybox" id="pyDiscountSummary" aria-live="polite"></div>
     <label for="pyRef">Reference no. (optional)</label><input id="pyRef" maxlength="80">
     <label for="pyNotes">Notes (optional)</label><input id="pyNotes" maxlength="300">
+    <label for="pyStatus">Payment status</label><select id="pyStatus" style="max-width:340px"><option value="Confirmed">Confirmed - the money was received</option><option value="Pending">Pending - not received or not cleared yet</option></select>
+    <div class="hint">A referral partner earns their share only from Confirmed payments. A Pending payment can be confirmed later from the payment list.</div>
     <label class="chk"><input id="pyExtend" type="checkbox" checked> Extend the subscription with this payment</label>
     <label class="chk" id="pyOverBox" style="display:none"><input id="pyOver" type="checkbox"> Allow another Demo for this email (override the one-time rule)</label>
     <div class="keybox" id="pyPreview" style="border-style:solid"></div>
@@ -614,6 +622,35 @@
   </div>
 </div>
 
+<!-- new prices: new clients only (Legacy Pricing) or everyone -->
+<div class="bg" id="psBg">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="psTitle" style="max-width:520px">
+    <h3 id="psTitle">Apply the new prices to new clients only?</h3>
+    <p class="hint" id="psWho" style="font-size:13.5px"></p>
+    <div class="keybox" style="border-style:solid"><b>Yes, new clients only</b>: existing clients are tagged <b>Legacy Pricing</b> and keep their current rates. You can change or remove this per client (Edit client).<br><br>
+      <b>No, everyone</b>: existing clients pay the new prices from their next renewal. Clients already on Legacy Pricing keep their rates either way.</div>
+    <div class="foot"><button class="btn" data-close type="button">Cancel</button><button class="btn" id="btnPsAll" type="button">No, everyone at next renewal</button><button class="btn pri" id="btnPsNew" type="button">Yes, new clients only</button></div>
+  </div>
+</div>
+
+<!-- manual adjustment of a partner's earnings -->
+<div class="bg" id="ajBg">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="ajTitle" style="max-width:480px">
+    <h3 id="ajTitle">Adjust partner earnings</h3>
+    <p class="hint" id="ajWho" style="font-size:13.5px"></p>
+    <div class="grid3">
+      <div><label for="ajDir">Adjustment</label><select id="ajDir"><option value="add">Add to earnings</option><option value="deduct">Deduct from earnings</option></select></div>
+      <div><label for="ajAmount">Amount (<span id="ajCur"></span>)</label><input id="ajAmount" inputmode="decimal"></div>
+      <div><label for="ajDate">Date</label><input id="ajDate" type="date"></div>
+    </div>
+    <label for="ajReason">Reason / note (required)</label><input id="ajReason" maxlength="200" placeholder="Bonus for March, correction of a duplicate credit...">
+    <div class="keybox" id="ajPreview" style="border-style:solid"></div>
+    <div class="hint">Changes the partner's earned total and balance. It is listed in the earnings log with your reason; the partner sees it as "Manual adjustment". It can be voided later.</div>
+    <div class="msg" id="ajMsg"></div>
+    <div class="foot"><button class="btn" data-close type="button">Cancel</button><button class="btn pri" id="btnAjSave" type="button">Save adjustment</button></div>
+  </div>
+</div>
+
 <!-- log a payout to a partner -->
 <div class="bg" id="poBg">
   <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="poTitle">
@@ -675,17 +712,20 @@
   function nice(s) { if (!s) return ''; var p = s.split('-'); return MON[+p[1] - 1] + ' ' + (+p[2]) + ', ' + p[0]; }
   function money(n) {
     n = Math.round((Number(n) || 0) * 100) / 100;
+    var neg = n < 0; n = Math.abs(n);
     var p = (n % 1 === 0 ? String(n) : n.toFixed(2)).split('.');
     p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return (S.config.currency || '') + p.join('.');
+    return (neg ? '\u2212' : '') + (S.config.currency || '') + p.join('.');
   }
   function priceOf(tier) { return Number((S.config.prices || {})[tier]) || 0; }
   function offered(tier) { return !S.config.offered || S.config.offered[tier] !== false; }
   function extraFee() { return Number(S.config.extraFee) || 0; }
   // what a client's extra resorts add to one period of a tier, and the subscription total of that period
-  function extraOf(c, tier) { return c && c.freeResorts ? 0 : Math.round(extraFee() * ((c && c.extraResorts) || 0) * (MONTHS_IN[tier] || 0) * 100) / 100; }
+  function cPrice(c, tier) { return c && c.rates && c.rates.prices ? (Number(c.rates.prices[tier]) || 0) : priceOf(tier); }      // Legacy Pricing aware
+  function cFee(c) { return c && c.rates && c.rates.extraFee !== undefined && c.rates.extraFee !== null ? Number(c.rates.extraFee) || 0 : extraFee(); }
+  function extraOf(c, tier) { return c && c.freeResorts ? 0 : Math.round(cFee(c) * ((c && c.extraResorts) || 0) * (MONTHS_IN[tier] || 0) * 100) / 100; }
   function discOf(c) { return Math.min(100, Math.max(0, Number(c && c.discountPct) || 0)); }      // referral discount in percent
-  function totalOf(c, tier) { return Math.round((priceOf(tier) + extraOf(c, tier)) * (1 - (MONTHS_IN[tier] ? discOf(c) : 0) / 100) * 100) / 100; }
+  function totalOf(c, tier) { return Math.round((cPrice(c, tier) + extraOf(c, tier)) * (1 - (MONTHS_IN[tier] ? discOf(c) : 0) / 100) * 100) / 100; }
   function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
 
   /* ---------- server calls ---------- */
@@ -784,7 +824,7 @@
       var xrLine = c.freeResorts ? '<div class="em">Unlimited resorts · no extra charge</div>' : '<div class="em">' + (inc + xr) + ' resorts' + (xr ? ' (' + inc + ' + ' + xr + ' extra' + (extraOf(c, c.tier) ? ': +' + esc(money(extraOf(c, c.tier))) : (c.tier === 'Lifetime' && extraFee() ? ': +' + esc(money(extraFee() * xr)) + ' per month' : '')) + ')' : '') + '</div>';
       var req = c.resortRequest ? '<div class="reqbox"><span class="badge b-req">Wants +' + c.resortRequest + ' resort' + (c.resortRequest === 1 ? '' : 's') + '</span>' +
         '<button class="btn sm pri" data-rq="1" data-k="' + k + '" type="button">Approve</button><button class="btn sm" data-rq="0" data-k="' + k + '" type="button">Decline</button></div>' : '';
-      h += '<tr><td><div class="nm">' + esc(c.name) + (isSelf(c) ? '<span class="badge b-self">Self-registered</span>' : '') + (c.cancelled ? '<span class="badge b-cancel" title="Cancelled on ' + esc(c.cancelledOn) + ': no renewal notices, access until expiry">Cancelled</span>' : '') + '</div><div class="em">' + esc(c.email) + (c.phone ? ' &middot; ' + esc(c.phone) : '') + '</div>' + req + '</td>' +
+      h += '<tr><td><div class="nm">' + esc(c.name) + (isSelf(c) ? '<span class="badge b-self">Self-registered</span>' : '') + (c.cancelled ? '<span class="badge b-cancel" title="Cancelled on ' + esc(c.cancelledOn) + ': no renewal notices, access until expiry">Cancelled</span>' : '') + (c.legacy ? '<span class="badge b-warn" style="margin-left:6px;font-size:11px" title="Keeps their own rates when the price list changes">Legacy Pricing</span>' : '') + '</div><div class="em">' + esc(c.email) + (c.phone ? ' &middot; ' + esc(c.phone) : '') + '</div>' + req + '</td>' +
         '<td data-l="Tier"><span class="badge b-tier">' + esc(c.tier) + '</span><div class="em">' + (c.tier === 'Demo' && !pr ? 'Free' : pr ? esc(money(pr)) + ' ' + PERIOD[c.tier] : 'No price set') + '</div>' + xrLine + refLine(c) + '</td>' +
         '<td data-l="Status">' + statusBadge(c) + '</td>' +
         '<td data-l="Expires">' + (c.lifetime ? 'Never' : esc(nice(c.expiry)) + '<div class="em">' + esc(leftText(c)) + '</div>') + '</td>' +
@@ -857,12 +897,13 @@
     rows.forEach(function (p) {
       h += '<tr' + (p.isVoid ? ' class="void"' : '') + '><td data-l="Date paid">' + esc(nice(p.date)) + '</td>' +
         '<td><div class="nm">' + esc(p.name) + '</div><div class="em">' + esc(p.email) + '</div>' + (p.financialExcluded ? '<span class="badge b-off">Excluded from financial totals</span>' : '') + '</td>' +
-        '<td data-l="Type">' + esc(p.type) + '</td>' +
+        '<td data-l="Type">' + esc(p.type) + (p.pending && !p.isVoid ? '<div><span class="badge b-warn">Pending</span></div>' : '') + '</td>' +
         '<td data-l="Tier">' + esc(p.tier) + (p.periods > 1 ? ' &times; ' + p.periods : '') + '</td>' +
         '<td data-l="Period">' + (p.from ? esc(nice(p.from)) + ' to ' + (p.to ? esc(nice(p.to)) : 'never expires') : '<span class="em">Not extended</span>') + '</td>' +
         '<td data-l="Method"><span class="em">' + esc([p.method, p.reference].filter(Boolean).join(' / ') || '-') + (p.notes ? '<br>' + esc(p.notes) : '') + '</span></td>' +
         '<td class="num" data-l="Amount"><b>' + esc(money(p.amount)) + '</b>' + (p.manualDiscount > 0 ? '<div class="em">Manual discount: ' + esc(money(p.manualDiscount)) + (p.discountType === 'percent' ? ' (' + p.discountValue + '%)' : '') + '<br>Net due: ' + esc(money(p.netDue)) + '</div>' : '') + '</td>' +
-        '<td><div class="acts"><button class="btn sm" data-void="' + esc(p.id) + '" data-on="' + (p.isVoid ? '0' : '1') + '" type="button">' + (p.isVoid ? 'Restore' : 'Void') + '</button></div></td></tr>';
+        '<td><div class="acts">' + (p.pending && !p.isVoid ? '<button class="btn sm pri" data-confirm="' + esc(p.id) + '" type="button">Confirm</button>' : '') +
+        '<button class="btn sm" data-void="' + esc(p.id) + '" data-on="' + (p.isVoid ? '0' : '1') + '" type="button">' + (p.isVoid ? 'Restore' : 'Void') + '</button></div></td></tr>';
     });
     $('plist').innerHTML = h + '</tbody></table>';
   }
@@ -894,7 +935,7 @@
     $('eXr').value = c ? (c.extraResorts || 0) : 0;
     $('eFreeResorts').checked = !!(c && c.freeResorts);
     $('eXr').disabled = $('eFreeResorts').checked;
-    $('eXrHint').textContent = 'Every plan includes ' + (S.config.includedResorts || 2) + ' resorts. Each extra one adds ' + money(extraFee()) + ' per month to this client\'s subscription total.' +
+    $('eXrHint').textContent = 'Every plan includes ' + (S.config.includedResorts || 2) + ' resorts. Each extra one adds ' + money(cFee(c)) + ' per month to this client\'s subscription total.' +
       (c && c.resortRequest ? ' This client is asking for ' + c.resortRequest + ' more.' : '') + (c && c.terms ? ' Terms accepted: ' + c.terms + '.' : '');
     if ($('eFreeResorts').checked) $('eXrHint').textContent = 'Unlimited resorts at no extra charge. Previous approved counts are retained for use if this exemption is removed.';
     $('eStart').value = c ? (c.start || S.today) : S.today;
@@ -903,6 +944,7 @@
     $('eRefBy').value = c ? (c.refBy || '') : '';
     $('eRefExcluded').checked = !!(c && c.referralExcluded);
     $('eFinExcluded').checked = !!(c && c.financialExcluded);
+    $('eLegacy').checked = !!(c && c.legacy); syncLegacy(true);
     $('eRefHint').textContent = c ? 'This client\'s own referral code: ' + c.refCode + (c.refTotal ? ' (' + c.refActive + ' of ' + c.refTotal + ' referred clients active, ' + (c.discountPct || 0) + '% off).' : '.') +
       (c.refBy ? ' Referred by ' + (c.refByName || 'an unknown code') + '.' : '') : 'If someone referred this client, type their code. A code that starts with P belongs to a partner.';
     $('btnDel').style.display = c ? '' : 'none';
@@ -910,10 +952,22 @@
     if (c && c.expiry) { expiryTouched = true; syncExpiry(false); } else syncExpiry(true);
     show('edBg', true); setTimeout(function () { $('eName').focus(); }, 50);
   }
+  // Legacy Pricing box in the client dialog: the base price is for the tier chosen above
+  function syncLegacy(fill) {
+    var on = $('eLegacy').checked, tier = $('eTier').value, c = editing, rates = c && c.rates && c.legacy ? c.rates : null;
+    var paid = ['Monthly', 'Quarterly', 'Yearly', 'Lifetime'].indexOf(tier) >= 0;
+    $('eLegacyBox').style.display = on ? '' : 'none'; $('eLegacyPrice').disabled = !paid;
+    $('eLegacyTier').textContent = paid ? tier : 'choose a paid tier';
+    if (fill || !$('eLegacyPrice').value) $('eLegacyPrice').value = paid ? String(rates ? (Number(rates.prices[tier]) || 0) : priceOf(tier)) : '';
+    if (fill || !$('eLegacyFee').value) $('eLegacyFee').value = String(rates ? cFee(c) : extraFee());
+    $('eLegacyHint').textContent = !on ? 'Off: this client pays the current price list at their next renewal.' :
+      'On: quotes, renewal reminders and the prices in their app use these rates. Current list price for ' + (paid ? tier + ': ' + money(priceOf(tier)) : 'paid tiers') + ', extra resort ' + money(extraFee()) + ' per month.';
+  }
   function saveClient() {
     $('edMsg').textContent = '';
     var o = { key: editing ? editing.key : '', name: $('eName').value, email: $('eEmail').value, extra: $('eExtra').value, phone: $('ePhone').value,
-              tier: $('eTier').value, start: $('eStart').value, expiry: $('eExpiry').value, notes: $('eNotes').value, override: $('eOver').checked, extraResorts: $('eXr').value, freeResorts:$('eFreeResorts').checked, refBy: $('eRefBy').value, referralExcluded: $('eRefExcluded').checked, financialExcluded: $('eFinExcluded').checked };
+              tier: $('eTier').value, start: $('eStart').value, expiry: $('eExpiry').value, notes: $('eNotes').value, override: $('eOver').checked, extraResorts: $('eXr').value, freeResorts:$('eFreeResorts').checked, refBy: $('eRefBy').value, referralExcluded: $('eRefExcluded').checked, financialExcluded: $('eFinExcluded').checked,
+              legacy: $('eLegacy').checked, legacyPrice: $('eLegacy').checked ? $('eLegacyPrice').value : '', legacyExtraFee: $('eLegacy').checked ? $('eLegacyFee').value : '' };
     call('adminSaveClient', [o], function (v) {
       show('edBg', false);
       if (v.isNew) openKey(byKey(v.key), true); else toast('Saved.');
@@ -933,7 +987,7 @@
     $('pyType').innerHTML = (S.paymentTypes || []).map(function (t) { return '<option>' + esc(t) + '</option>'; }).join('');
     $('pyPeriods').value = 1; $('pyDate').value = S.today; $('pyMethod').value = ''; $('pyRef').value = ''; $('pyNotes').value = '';
     $('pyDiscountType').value = 'none'; $('pyDiscountValue').value = 0;
-    $('pyExtend').checked = true; $('pyOver').checked = false; $('pyMsg').textContent = ''; $('pyCur').textContent = S.config.currency || '';
+    $('pyExtend').checked = true; $('pyOver').checked = false; $('pyStatus').value = 'Confirmed'; $('pyMsg').textContent = ''; $('pyCur').textContent = S.config.currency || '';
     amountTouched = false; typeTouched = false;
     payClientChanged();
     if (payReceipt) {
@@ -964,7 +1018,7 @@
     $('pyDiscountSummary').textContent = valid ? 'Total due: ' + money(gross) + ' − manual discount ' + money(off) + ' = ' + money(net) + '. Amount paid records the actual amount received.' : 'The discount cannot exceed the total due or 100%.';
     if (!amountTouched && valid) $('pyAmount').value = String(net);
     $('pyPriceHint').textContent = (pr ? 'Subscription total: ' + money(pr) + ' ' + PERIOD[tier] +
-        (xp ? ' (' + money(priceOf(tier)) + ' plan + ' + money(xp) + ' for ' + plural(c.extraResorts, 'extra resort') + ' at ' + money(extraFee()) + ' per month)' : '') +
+        (xp ? ' (' + money(cPrice(c, tier)) + ' plan + ' + money(xp) + ' for ' + plural(c.extraResorts, 'extra resort') + ' at ' + money(cFee(c)) + ' per month)' : '') + (c.legacy ? ' Legacy Pricing.' : '') +
         (n > 1 ? ' x ' + n + ' = ' + money(pr * n) : '') + (discOf(c) ? ', after the ' + discOf(c) + '% referral discount' : '') + '. Change the amount if you gave a discount.'
       : 'No price is set for ' + tier + ' yet (Pricing tab). Type the amount that was paid.') +
       (tier === 'Lifetime' && !c.freeResorts && c.extraResorts && extraFee() ? ' Lifetime has no renewals: this client also owes ' + money(extraFee() * c.extraResorts) + ' per month for ' + plural(c.extraResorts, 'extra resort') + ' - log those payments as type Other with "Extend the subscription" unticked.' : '');
@@ -982,9 +1036,10 @@
     $('pyMsg').textContent = '';
     var o = { key: c.key, type: $('pyType').value, tier: $('pyTier').value, periods: $('pyPeriods').value, amount: $('pyAmount').value, date: $('pyDate').value,
               method: $('pyMethod').value, reference: $('pyRef').value, notes: $('pyNotes').value, extend: $('pyExtend').checked, override: $('pyOver').checked,
-              receiptId: payReceipt ? payReceipt.id : '', discountType:$('pyDiscountType').value, discountValue:$('pyDiscountValue').value };
+              receiptId: payReceipt ? payReceipt.id : '', discountType:$('pyDiscountType').value, discountValue:$('pyDiscountValue').value, status: $('pyStatus').value };
     call('adminRecordPayment', [o], function (v) { show('pyBg', false); toast('Payment logged for ' + c.name + (o.extend ? ' and subscription extended.' : '.') + (payReceipt ? ' The receipt is approved and the client emailed.' : '') +
-      (v && v.earned ? ' Partner ' + v.earned.partner + ' earned ' + money(v.earned.amount) + ' (' + v.earned.pct + '%).' : '')); payReceipt = null; }, 'pyMsg');
+      (v && v.earned ? ' Partner ' + v.earned.partner + ' earned ' + money(v.earned.amount) + ' (' + v.earned.pct + '%).' : '') +
+      (v && v.payStatus === 'Pending' ? ' Saved as Pending: confirm it when the money arrives to credit any referral share.' : '')); payReceipt = null; }, 'pyMsg');
   }
 
   function openKey(c, fresh) {
@@ -1086,7 +1141,7 @@
     ft.innerHTML = '<option value="">All tiers</option>' + S.tiers.map(function (t) { return '<option>' + esc(t) + '</option>'; }).join('');
     ft.value = cur;
   }
-  function saveConfig(msgId, okText, then) {
+  function saveConfig(msgId, okText, then, scope) {
     $(msgId).textContent = '';
     var offer = {}; ['Demo', 'Monthly', 'Quarterly', 'Yearly', 'Lifetime'].forEach(function (t) { offer[t] = $('o' + t).checked; });
     var prices = {}; ['Demo', 'Monthly', 'Quarterly', 'Yearly', 'Lifetime'].forEach(function (t) { prices[t] = $('p' + t).value; });
@@ -1099,8 +1154,24 @@
       payNote: $('cPayNote').value, reviewHours: $('cHours').value, pendingAlerts: $('cPendAl').checked,
       activity:{activeDays:$('aActiveDays').value,rareDays:$('aRareDays').value,riskDays:$('aRiskDays').value},
       referral: { on: $('rfOn').checked, clientPct: $('rfPct').value, clientMax: $('rfMax').value, partnerPct: $('rfShare').value, partnerMonths: $('rfPeriod').value === 'lifetime' ? 'Lifetime' : $('rfMonths').value,
-                  partnerSignup: $('rfSignup').checked, banner: $('rfBanner').value }
-    }], function () { toast(okText); if (then) then(); }, msgId);
+                  partnerSignup: $('rfSignup').checked, banner: $('rfBanner').value },
+      priceScope: scope || ''
+    }], function (v) {
+      toast(okText + (v && v.legacyTagged ? ' ' + plural(v.legacyTagged, 'existing client') + ' tagged Legacy Pricing (current rates locked in).' : '') +
+            (v && v.priceChanged && scope === 'all' ? ' Existing clients pay the new prices from their next renewal.' : ''));
+      if (then) then();
+    }, msgId, function (v) {
+      if (!v.needPriceScope) return;
+      $(msgId).textContent = '';
+      pendingScopeSave = { msgId: msgId, okText: okText, then: then };
+      $('psWho').textContent = 'You changed subscription or extra resort prices. ' + plural(v.existing, 'existing paying client') + ' ' + (v.existing === 1 ? 'is' : 'are') + ' not on Legacy Pricing yet.';
+      show('psBg', true);
+    });
+  }
+  var pendingScopeSave = null;
+  function savePriceScope(scope) {
+    var q = pendingScopeSave; pendingScopeSave = null; show('psBg', false);
+    if (q) saveConfig(q.msgId, q.okText, q.then, scope);
   }
   // the QR picture: resized in the browser to 420px, then kept in the admin's Drive
   function readQr(file) {
@@ -1312,7 +1383,7 @@
           '<td class="num" data-l="Earned">' + esc(money(p.earned)) + '</td><td class="num" data-l="Paid">' + esc(money(p.paid)) + '</td>' +
           '<td class="num" data-l="Balance"><b style="color:' + (p.balance > 0 ? 'var(--warn)' : 'inherit') + '">' + esc(money(p.balance)) + '</b></td>' +
           '<td data-l="Payout details"><span class="em">' + (p.method ? esc(p.method) + '<br>' + esc(p.accName) + '<br>' + esc(p.accNo) : 'Not given yet') + '</span></td>' +
-          '<td><div class="acts"><button class="btn sm pri" data-rpay="' + id + '" type="button">Log payout</button><button class="btn sm" data-rsee="' + id + '" type="button">Clients</button>' +
+          '<td><div class="acts"><button class="btn sm pri" data-rpay="' + id + '" type="button">Log payout</button><button class="btn sm" data-radj="' + id + '" type="button">Adjust</button><button class="btn sm" data-rsee="' + id + '" type="button">Clients</button>' +
           (p.hasQr ? '<button class="btn sm" data-rqr="' + id + '" type="button">QR code</button>' : '') + '<button class="btn sm" data-redit="' + id + '" type="button">Edit</button></div></td></tr>';
       });
       $('rplist').innerHTML = h + '</tbody></table>';
@@ -1323,7 +1394,7 @@
     else {
       var ch = '<table><thead><tr><th>Client</th><th>Code</th><th>Referred clients</th><th>Discount</th><th class="num">Saves each period</th></tr></thead><tbody>';
       cr.forEach(function (c) {
-        var full = Math.round((priceOf(c.tier) + extraOf(c, c.tier)) * 100) / 100, save = Math.round((full - totalOf(c, c.tier)) * 100) / 100;
+        var full = Math.round((cPrice(c, c.tier) + extraOf(c, c.tier)) * 100) / 100, save = Math.round((full - totalOf(c, c.tier)) * 100) / 100;
         ch += '<tr><td><div class="nm">' + esc(c.name) + '</div><div class="em">' + esc(c.email) + '</div></td><td data-l="Code"><span class="badge b-code" data-copy="' + esc(c.refCode) + '">' + esc(c.refCode) + '</span></td>' +
           '<td data-l="Referred clients">' + c.refActive + ' active<div class="em">' + c.refTotal + ' in total</div></td>' +
           '<td data-l="Discount">' + (c.referralExcluded ? '<span class="badge b-off">Excluded</span>' : '<b>' + (c.discountPct || 0) + '%</b>') + '</td><td class="num" data-l="Saves">' + (save ? esc(money(save)) + ' ' + PERIOD[c.tier] : '-') + '</td></tr>';
@@ -1334,6 +1405,9 @@
     var E = R.earnings || [], O = R.payouts || [];
     $('relist').innerHTML = !E.length ? '<div class="hint">Nothing yet. A share is added here every time you log a payment for a client a partner referred.</div>' :
       '<table><thead><tr><th>Date</th><th>Partner / client</th><th class="num">Payment</th><th class="num">Earned</th></tr></thead><tbody>' + E.map(function (e) {
+        if (e.adjustment) return '<tr' + (e.isVoid ? ' class="void"' : '') + '><td data-l="Date">' + esc(nice(e.date)) + '</td><td><div class="nm">' + esc(e.partner) + '</div><div class="em">' + esc(e.client) + '</div></td>' +
+          '<td class="num" data-l="Payment"><span class="badge b-warn">Adjustment</span><div style="margin-top:4px"><button class="btn sm" data-adjvoid="' + esc(e.id) + '" data-on="' + (e.isVoid ? '0' : '1') + '" type="button">' + (e.isVoid ? 'Restore' : 'Void') + '</button></div></td>' +
+          '<td class="num" data-l="Earned"><b style="color:' + (e.amount < 0 ? 'var(--bad)' : 'inherit') + '">' + (e.amount > 0 ? '+' : '') + esc(money(e.amount)) + '</b></td></tr>';
         return '<tr' + (e.isVoid ? ' class="void"' : '') + '><td data-l="Date">' + esc(nice(e.date)) + '</td><td><div class="nm">' + esc(e.partner) + '</div><div class="em">' + esc(e.client) + '</div></td>' +
           '<td class="num" data-l="Payment">' + esc(money(e.payAmount)) + '<div class="em">' + e.pct + '%</div></td><td class="num" data-l="Earned"><b>' + esc(money(e.amount)) + '</b></td></tr>';
       }).join('') + '</tbody></table>';
@@ -1376,6 +1450,28 @@
     call('adminLogPayout', [{ referrerId: p.id, amount: $('poAmount').value, date: $('poDate').value, method: $('poMethod').value, reference: $('poRef').value, notes: $('poNotes').value, force: $('poForce').checked }],
       function () { show('poBg', false); toast('Payout to ' + p.name + ' logged. They were emailed.'); payoutFor = null; }, 'poMsg',
       function (v) { if (v.needForce) $('poForceBox').style.display = 'flex'; });
+  }
+  var adjustFor = null;
+  function openAdjust(p) {
+    adjustFor = p;
+    $('ajWho').textContent = p.name + ': earned ' + money(p.earned) + ', paid ' + money(p.paid) + ', balance ' + money(p.balance) + '.';
+    $('ajDir').value = 'add'; $('ajAmount').value = ''; $('ajDate').value = S.today; $('ajReason').value = ''; $('ajMsg').textContent = ''; $('ajCur').textContent = S.config.currency || '';
+    adjustPreview(); show('ajBg', true); setTimeout(function () { $('ajAmount').focus(); }, 50);
+  }
+  function adjustPreview() {
+    var p = adjustFor; if (!p) return;
+    var a = Math.abs(Number(String($('ajAmount').value).replace(/,/g, '')) || 0), sign = $('ajDir').value === 'deduct' ? -1 : 1;
+    var bal = Math.round((p.balance + sign * a) * 100) / 100;
+    $('ajPreview').innerHTML = a ? 'Earned ' + esc(money(p.earned)) + ' &rarr; <b>' + esc(money(p.earned + sign * a)) + '</b>. Balance ' + esc(money(p.balance)) + ' &rarr; <b>' + esc(money(bal)) + '</b>' +
+      (bal < 0 ? '<div class="hint" style="color:var(--bad)">The balance becomes negative: the partner would owe this amount back (it is taken from their next earnings).</div>' : '') : 'Type an amount.';
+  }
+  function saveAdjust() {
+    var p = adjustFor; if (!p) return;
+    $('ajMsg').textContent = '';
+    if (!$('ajReason').value.trim()) { $('ajMsg').textContent = 'Please type the reason for this adjustment.'; $('ajReason').focus(); return; }
+    var dir = $('ajDir').value;
+    call('adminAdjustPartner', [{ referrerId: p.id, direction: dir, amount: $('ajAmount').value, date: $('ajDate').value, reason: $('ajReason').value }],
+      function (v) { show('ajBg', false); toast(p.name + ': ' + (dir === 'deduct' ? 'deducted ' : 'added ') + money(Math.abs(v.amount)) + '. Earnings and balance updated.'); adjustFor = null; }, 'ajMsg');
   }
   function showReferees(p) {
     $('rvTitle').textContent = 'Clients referred by ' + p.name;
@@ -1442,11 +1538,19 @@
   $('btnSavePay').addEventListener('click', savePaySettings);
   $('btnQrRemove').addEventListener('click', function () { qrPending = null; $('qrFile').value = ''; call('adminSaveQr', [''], function () { toast('QR code removed.'); }, 'qrMsg'); });
   $('plist').addEventListener('click', function (e) {
+    var cb = e.target.closest ? e.target.closest('button[data-confirm]') : null;
+    if (cb) {
+      call('adminConfirmPayment', [cb.getAttribute('data-confirm')], function (v) {
+        toast('Payment confirmed.' + (v && v.earned ? ' Partner ' + v.earned.partner + ' earned ' + money(v.earned.amount) + ' (' + v.earned.pct + '%).' : ''));
+      });
+      return;
+    }
     var b = e.target.closest ? e.target.closest('button[data-void]') : null; if (!b) return;
     var on = b.getAttribute('data-on') === '1';
     call('adminVoidPayment', [b.getAttribute('data-void'), on], function () { toast(on ? 'Payment voided. It no longer counts in the totals; the client\'s dates were not changed.' : 'Payment restored.'); });
   });
-  $('eTier').addEventListener('change', function () { syncExpiry(true); });
+  $('eTier').addEventListener('change', function () { syncExpiry(true); syncLegacy(false); $('eLegacyPrice').value = ''; syncLegacy(false); });
+  $('eLegacy').addEventListener('change', function () { syncLegacy(false); });
   $('eStart').addEventListener('change', function () { syncExpiry(true); });
   $('eExpiry').addEventListener('input', function () { expiryTouched = true; });
   $('btnSaveClient').addEventListener('click', saveClient);
@@ -1557,6 +1661,15 @@
   $('btnRefNew').addEventListener('click', function () { openPartner(null); });
   $('btnRpSave').addEventListener('click', savePartner);
   $('btnPoSave').addEventListener('click', savePayout);
+  $('btnAjSave').addEventListener('click', saveAdjust);
+  $('ajAmount').addEventListener('input', adjustPreview); $('ajDir').addEventListener('change', adjustPreview);
+  $('btnPsNew').addEventListener('click', function () { savePriceScope('new'); });
+  $('btnPsAll').addEventListener('click', function () { savePriceScope('all'); });
+  $('relist').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button[data-adjvoid]') : null; if (!b) return;
+    var on = b.getAttribute('data-on') === '1';
+    call('adminVoidAdjustment', [b.getAttribute('data-adjvoid'), on], function () { toast(on ? 'Adjustment voided. The partner\'s earnings and balance no longer include it.' : 'Adjustment restored.'); });
+  });
   $('btnSaveRef').addEventListener('click', function () { saveConfig('rfMsg', 'Referral settings saved.'); });
   function syncEarningPeriod() {
     var lifetime = $('rfPeriod').value === 'lifetime';
@@ -1570,9 +1683,10 @@
   $('btnCopyRefLink').addEventListener('click', function () { var l = (S.referral || {}).link; if (l) copy(l, 'Partner page link'); else toast('Paste your License Server URL under Alerts & setup first.', true); });
   $('rplist').addEventListener('click', function (e) {
     var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
-    var p = partnerById(b.getAttribute('data-rpay') || b.getAttribute('data-rsee') || b.getAttribute('data-rqr') || b.getAttribute('data-redit'));
+    var p = partnerById(b.getAttribute('data-rpay') || b.getAttribute('data-radj') || b.getAttribute('data-rsee') || b.getAttribute('data-rqr') || b.getAttribute('data-redit'));
     if (!p) return;
-    if (b.hasAttribute('data-rpay')) openPayout(p); else if (b.hasAttribute('data-rsee')) showReferees(p);
+    if (b.hasAttribute('data-radj')) openAdjust(p);
+    else if (b.hasAttribute('data-rpay')) openPayout(p); else if (b.hasAttribute('data-rsee')) showReferees(p);
     else if (b.hasAttribute('data-rqr')) showPartnerQr(p); else openPartner(p);
   });
   $('poDetails').addEventListener('click', function (e) { if (e.target && e.target.id === 'btnPoQr' && payoutFor) showPartnerQr(payoutFor); });

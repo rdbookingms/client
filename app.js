@@ -74,6 +74,13 @@
     return html + esc(value.slice(end));
   }
   function lis(arr) { return arr.map(function(t){ return '<li>' + taggedText(t) + '</li>'; }).join(''); }
+  /* Receipt bullets for Terms and Conditions and Notes (Admin Settings > resort): on/off + Disc, Checkmark, Arrow, Dash or Numbered. */
+  var BULLET_STYLES = [['disc','\u2022  Disc'],['check','\u2713  Checkmark'],['arrow','\u25B8  Arrow'],['dash','\u2013  Dash'],['num','1.  Numbered']];
+  function bulletOf(cfg, part) {
+    var b = cfg && cfg.bullets && cfg.bullets[part] || {}, ok = BULLET_STYLES.some(function(x){ return x[0] === b.style; });
+    return b.on === false ? 'off' : (ok ? b.style : 'disc');
+  }
+  function listAttr(cfg, part) { return ' class="tb" data-b="' + bulletOf(cfg, part) + '"'; }
 
   // ----- colors -----
   function rgbOf(h) { h = String(h || '#000000').replace('#', ''); return [parseInt(h.substr(0, 2), 16) || 0, parseInt(h.substr(2, 2), 16) || 0, parseInt(h.substr(4, 2), 16) || 0]; }
@@ -128,9 +135,9 @@
     '<div class="r-foot" style="background:linear-gradient(110deg,' + tintA(c1, .8, .86) + ' 0%,' + tintA(midHex(c1, c2), .8, .86) + ' 50%,' + tintA(c2, .8, .86) + ' 100%)"><div class="r-foot-grid">' +
       '<div class="r-foot-side">' + (cfg.deposit ? '<div class="deposit"><div class="t">SECURITY DEPOSIT</div><div class="a">' + esc(cfg.deposit) + '</div></div>' : '') +
       '<div class="yb excl-box"><h4>' + esc(cfg.exclHeading || 'Exclusions / Add-ons') + '</h4><ul class="fee-list" id="p_feeList"></ul></div></div>' +
-      '<div class="r-foot-terms">' + (terms.length ? '<h4>' + esc(cfg.termsHeading || 'Terms and Conditions') + '</h4><ul>' + lis(terms) + '</ul>' : '') + '</div></div>' +
+      '<div class="r-foot-terms">' + (terms.length ? '<h4>' + esc(cfg.termsHeading || 'Terms and Conditions') + '</h4><ul' + listAttr(cfg, 'terms') + '>' + lis(terms) + '</ul>' : '') + '</div></div>' +
       (cfg.thanks ? '<div class="thanks">' + esc(cfg.thanks) + '</div>' : '') +
-      (notes.length ? '<div class="notes yb"><b>Note:</b><ul>' + lis(notes) + '</ul></div>' : '') +
+      (notes.length ? '<div class="notes yb"><b>Note:</b><ul' + listAttr(cfg, 'notes') + '>' + lis(notes) + '</ul></div>' : '') +
     '</div>';
   }
 
@@ -148,9 +155,9 @@
     '<div class="rp-body"><table class="bd booking-details rp-details"></table>' +
       (cfg.sigLeft || cfg.sigRight ? '<div class="rp-cols"><div>' + (cfg.sigLeft ? '<div class="sig"><span class="line"></span>' + esc(cfg.sigLeft) + '</div>' : '') + '</div><div>' + (cfg.sigRight ? '<div class="sig"><span class="line"></span>' + esc(cfg.sigRight) + '</div>' : '') + '</div></div>' : '') +
     '</div>' +
-    (terms.length ? '<div class="rp-rules" style="background:' + mixHex(c1, .93) + '"><div class="rp-sub">' + esc(cfg.termsHeading || 'Terms and Conditions') + '</div><ol>' + lis(terms) + '</ol></div>' : '') +
+    (terms.length ? '<div class="rp-rules" style="background:' + mixHex(c1, .93) + '"><div class="rp-sub">' + esc(cfg.termsHeading || 'Terms and Conditions') + '</div><ol' + listAttr(cfg, 'terms') + '>' + lis(terms) + '</ol></div>' : '') +
     '<div class="rp-bottom">' +
-      '<div>' + (notes.length ? '<div class="rp-note yb"><b>Note:</b> ' + notes.map(taggedText).join('<br>') + '</div>' : '') +
+      '<div>' + (notes.length ? '<div class="rp-note yb"><b>Note:</b><ul' + listAttr(cfg, 'notes') + '>' + lis(notes) + '</ul></div>' : '') +
         (cfg.deposit ? '<div class="rp-note" style="margin-top:10px;background:#fdecea"><b>Security deposit:</b> ' + esc(cfg.deposit) + '</div>' : '') + '</div>' +
       '<div class="rp-excl yb"><h4>' + esc(cfg.exclHeading || 'Exclusions') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' +
     '</div>' +
@@ -2190,6 +2197,10 @@
     $('re_style').value = d.style; $('re_title').value = d.title; $('re_c1').value = d.c1; $('re_c2').value = d.c2;
     $('re_person').value = d.contactPerson; $('re_phone').value = d.phone; $('re_address').value = d.address; $('re_web').value = d.web;
     $('re_termsHead').value = d.termsHeading; $('re_terms').value = d.terms; $('re_notes').value = d.notes; $('re_deposit').value = d.deposit;
+    [['re_tb','terms'],['re_nb','notes']].forEach(function(x){
+      var st = bulletOf(d, x[1]), b = d.bullets && d.bullets[x[1]] || {};
+      $(x[0] + 'On').checked = st !== 'off'; $(x[0] + 'Style').value = st === 'off' ? (b.style || 'disc') : st; $(x[0] + 'Style').disabled = st === 'off';
+    });
     $('re_excl').value = d.exclHeading; $('re_thanks').value = d.thanks; $('re_sigL').value = d.sigLeft; $('re_sigR').value = d.sigRight;
     $('re_invMode').value = d.invoiceMode || 'Random'; $('re_invPrefix').value = d.invoicePrefix || ''; $('re_invNext').value = d.invoiceNext || 1;
     $('re_requiredFields').innerHTML = Object.keys(REQUIRED_FIELDS).map(function(k){return '<label><input type="checkbox" data-re-required="' + k + '"' + ((d.optional || []).indexOf(k) < 0 ? ' checked' : '') + '>' + esc(REQUIRED_FIELDS[k]) + '</label>';}).join('');
@@ -2284,6 +2295,7 @@
       name: name, active: $('re_active').checked, style: $('re_style').value, headerName: $('re_header').value.trim() || name, title: $('re_title').value.trim(),
       contactPerson: $('re_person').value.trim(), phone: $('re_phone').value.trim(), address: $('re_address').value.trim(), web: $('re_web').value.trim(),
       c1: $('re_c1').value, c2: $('re_c2').value, terms: $('re_terms').value, notes: $('re_notes').value, deposit: $('re_deposit').value.trim(),
+      bullets: {terms:{on:$('re_tbOn').checked, style:$('re_tbStyle').value}, notes:{on:$('re_nbOn').checked, style:$('re_nbStyle').value}},
       exclHeading: $('re_excl').value.trim() || 'Exclusions / Add-ons', thanks: $('re_thanks').value.trim(), termsHeading: $('re_termsHead').value.trim() || 'Terms and Conditions',
       sigLeft: $('re_sigL').value.trim(), sigRight: $('re_sigR').value.trim(),
       ownership: ownVal(), rentTotal: numOrNull(parseFloat($('re_rentTotal').value)), rentTermValue: numOrNull(parseInt($('re_termVal').value, 10)),
@@ -3214,6 +3226,7 @@
     resEd.layout[tableStyleKey($('re_style').value)].forEach(function(item){ if (item.key === key && TABLE_LAYOUTS.indexOf(sel.value) >= 0) item.layout = sel.value; });
   });
   $('re_layoutReset').addEventListener('click', resetTableLayoutEditor);
+  ['re_tb', 're_nb'].forEach(function(id){ $(id + 'On').addEventListener('change', function(){ $(id + 'Style').disabled = !this.checked; }); });
   $('re_style').addEventListener('change', function(){ renderTableLayoutEditor(); });
   ['re_customFields', 're_visibleFields'].forEach(function(id){ $(id).addEventListener('change', function(){ renderTableLayoutEditor(); }); });
   ['re_customFields', 're_lFee', 're_lDp', 're_lPax', 're_lAgent', 're_lIn', 're_lOut'].forEach(function(id){

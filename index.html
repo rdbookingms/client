@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=7e49e0212b">
+<link rel="stylesheet" href="app.css?v=17de477ac9">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -713,7 +713,10 @@
       <h2>Terms, notes and extras</h2>
       <label>Heading above the terms</label><input id="re_termsHead" maxlength="80" placeholder="Terms and Conditions">
       <label>Terms and conditions (one per line)</label><textarea id="re_terms" rows="7"></textarea>
+      <div class="bl-row"><label class="bl-on"><input type="checkbox" id="re_tbOn" checked> Show bullets on Terms and Conditions</label><select id="re_tbStyle" aria-label="Bullet style for Terms and Conditions"><option value="disc">•  Disc</option><option value="check">✓  Checkmark</option><option value="arrow">▸  Arrow</option><option value="dash">–  Dash</option><option value="num">1.  Numbered</option></select></div>
+      <p class="hint" style="margin:0 0 6px">Turn bullets off for plain lines. The choice is used on this resort's preview and downloaded receipts.</p>
       <label>Notes (one per line)</label><textarea id="re_notes" rows="3"></textarea>
+      <div class="bl-row"><label class="bl-on"><input type="checkbox" id="re_nbOn" checked> Show bullets on Notes</label><select id="re_nbStyle" aria-label="Bullet style for Notes"><option value="disc">•  Disc</option><option value="check">✓  Checkmark</option><option value="arrow">▸  Arrow</option><option value="dash">–  Dash</option><option value="num">1.  Numbered</option></select></div>
       <div class="row">
         <div><label>Security deposit text (leave empty to hide)</label><input id="re_deposit" maxlength="120" placeholder="e.g. 1,000 (Refundable upon check-out)"></div>
         <div><label>Heading for the fees list</label><input id="re_excl" maxlength="40" placeholder="Exclusions / Add-ons"></div>
@@ -943,7 +946,7 @@
   </div>
 </div>
 
-<script src="app.js?v=cdca4514f3"></script>
+<script src="app.js?v=8eca3afdf6"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

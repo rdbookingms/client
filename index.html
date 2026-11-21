@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=b99eec5982">
+<link rel="stylesheet" href="app.css?v=65d4de9ea5">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -619,6 +619,83 @@
   </div>
 </div>
 
+<!-- first-time setup wizard (shown once to a new business) -->
+<div class="modal-bg" id="wizBg">
+  <div class="wiz-card" role="dialog" aria-modal="true" aria-labelledby="wizTitle">
+    <div class="wiz-top">
+      <div><h3 id="wizTitle">Welcome! Let's set up your resort</h3><div class="wiz-sub" id="wizSub">Step 1 of 6</div></div>
+      <button class="ghost" id="wizSkipAll" type="button">Skip entire setup</button>
+    </div>
+    <div class="wiz-dots" id="wizDots"></div>
+    <div class="wiz-bar"><div id="wizBar" style="width:16%"></div></div>
+
+    <div class="wiz-pg" id="wizP1">
+      <h4>Resort identity</h4>
+      <p class="hint">This name appears on the main menu, the calendar and every receipt.</p>
+      <label for="wz_name">Resort name</label><input type="text" id="wz_name" maxlength="60" placeholder="Sunny Cove Resort">
+      <div class="wiz-def">If skipped: "My Resort"</div>
+    </div>
+
+    <div class="wiz-pg" id="wizP2">
+      <h4>Receipt template and colors</h4>
+      <div class="wiz-2"><div>
+        <label for="wz_style">Receipt layout</label><select id="wz_style"><option value="Modern">Modern</option><option value="Classic">Classic</option></select>
+        <label for="wz_c1">Primary color</label><input type="color" id="wz_c1" value="#0b93a6"><span class="wiz-hex" id="wz_c1t">#0b93a6</span>
+        <label for="wz_c2">Secondary color</label><input type="color" id="wz_c2" value="#7ad45c"><span class="wiz-hex" id="wz_c2t">#7ad45c</span>
+        <div class="wiz-def">If skipped: Modern, #0b93a6, #7ad45c</div>
+      </div><div><label>Live preview</label><div class="wiz-prev" id="wzPrev2"><div class="scaler"></div></div></div></div>
+    </div>
+
+    <div class="wiz-pg" id="wizP3">
+      <h4>Branding and invoice format</h4>
+      <div class="wiz-2">
+        <div><label>Resort logo</label><div class="wiz-up" id="wzLogoBox" tabindex="0" role="button"><span id="wzLogoTxt">Choose a PNG or JPG</span></div><input type="file" id="wz_logo" accept="image/png,image/jpeg" style="display:none"></div>
+        <div><label>Background photo</label><div class="wiz-up" id="wzBgBox" tabindex="0" role="button"><span id="wzBgTxt">Choose a PNG or JPG</span></div><input type="file" id="wz_bg" accept="image/png,image/jpeg" style="display:none"></div>
+      </div>
+      <div class="wiz-2">
+        <div><label for="wz_mode">Invoice numbering</label><select id="wz_mode"><option value="Random">Random (year + 5 digits)</option><option value="Continuous">Continuous (1, 2, 3 ...)</option><option value="Manual">Manual (you type each number)</option></select></div>
+        <div><label for="wz_pre">Prefix</label><select id="wz_pre"><option>INV#</option><option>INV-</option><option>RCPT-</option><option>BK-</option><option>RES-</option></select></div>
+      </div>
+      <div class="wiz-inv">Your next invoice will look like <b id="wzInvX">INV#2026-48213</b></div>
+      <div class="wiz-def">If skipped: no pictures, Random numbering, prefix INV#</div>
+    </div>
+
+    <div class="wiz-pg" id="wizP4">
+      <h4>Receipt contact details</h4>
+      <div class="wiz-2"><div><label for="wz_cp">Contact person</label><input type="text" id="wz_cp" maxlength="80" placeholder="Maria Santos"></div>
+        <div><label for="wz_ph">Phone number</label><input type="text" id="wz_ph" maxlength="80" inputmode="tel" placeholder="0917 123 4567"></div></div>
+      <label for="wz_ad">Resort address</label><input type="text" id="wz_ad" maxlength="200" placeholder="123 Rizal St., Pansol, Calamba, Laguna">
+      <label for="wz_web">Facebook page / website</label><input type="text" id="wz_web" maxlength="120" placeholder="facebook.com/sunnycoveresort">
+      <div class="wiz-def">If skipped: left blank (empty lines are hidden on the receipt)</div>
+    </div>
+
+    <div class="wiz-pg" id="wizP5">
+      <h4>Terms and notes</h4>
+      <div class="wiz-2"><div>
+        <label for="wz_terms">Terms and conditions (one per line)</label><textarea id="wz_terms" maxlength="6000"></textarea>
+        <label for="wz_notes">Receipt notes (one per line)</label><textarea id="wz_notes" maxlength="2000"></textarea>
+        <div class="wiz-def">If skipped: the two starter lines</div>
+      </div><div><label>Live preview</label><div class="wiz-prev" id="wzPrev5"><div class="scaler"></div></div></div></div>
+    </div>
+
+    <div class="wiz-pg" id="wizP6">
+      <h4>Tour schedules and add-ons</h4>
+      <div class="wiz-2"><div><label for="wz_dIn">Day Tour check-in</label><input type="time" id="wz_dIn" value="08:00"></div><div><label for="wz_dOut">Day Tour check-out</label><input type="time" id="wz_dOut" value="17:00"></div></div>
+      <div class="wiz-2"><div><label for="wz_nIn">Overnight check-in</label><input type="time" id="wz_nIn" value="19:00"></div><div><label for="wz_nOut">Overnight check-out (next day)</label><input type="time" id="wz_nOut" value="06:00"></div></div>
+      <label>Additional fees</label><div id="wzFees"></div>
+      <button class="ghost" id="wzAddFee" type="button" style="margin-top:6px">+ Add fee</button>
+      <label>Free amenities</label><div id="wzAm"></div>
+      <button class="ghost" id="wzAddAm" type="button" style="margin-top:6px">+ Add amenity</button>
+      <div class="wiz-def">If skipped: 8:00 AM - 5:00 PM and 7:00 PM - 6:00 AM, no fees or amenities. 22-hour times stay in Admin Settings.</div>
+    </div>
+
+    <div class="wiz-err" id="wizMsg"></div>
+    <div class="wiz-nav">
+      <button class="ghost" id="wizBack" type="button">&larr; Back</button>
+      <div class="r"><button class="ghost" id="wizSkip" type="button">Skip</button><button class="primary" id="wizNext" type="button">Next &rarr;</button></div>
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="admBg" style="z-index:70">
   <div class="confirm-card">
     <div id="adm_enter">
@@ -961,7 +1038,7 @@
   </div>
 </div>
 
-<script src="app.js?v=c8d2cb86fb"></script>
+<script src="app.js?v=f5e1de73ca"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

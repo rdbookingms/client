@@ -423,6 +423,162 @@
     renderUpcomingSummary(); renderBanner(); renderClientReferral(LIC && LIC.referral);
     loadPendingImages_(cfg);
   }
+  /* ---------- first-time setup wizard (6 steps, shown once to a new business) ---------- */
+  var WZ = null;
+  function openWizard() {
+    if (WZ || PROVIDER || !(window.google && google.script)) return;
+    WZ = {i: 1, st: {}, adm: '', logo: '', bg: '', busy: false};
+    RUN.withSuccessHandler(function(res){
+        if (!res || !res.ok) { WZ = null; if (CFG) CFG.setupWizard = false; return; }
+        WZ.adm = res.adminToken;
+        var rs = RESORTS[res.resort] || {}, D = res.defaults || {};
+        $('wz_name').value = '';
+        $('wz_style').value = rs.style === 'Classic' ? 'Classic' : 'Modern';
+        $('wz_c1').value = rs.c1 || D.c1 || '#0b93a6'; $('wz_c2').value = rs.c2 || D.c2 || '#7ad45c';
+        $('wz_terms').value = rs.terms || D.terms || ''; $('wz_notes').value = rs.notes || D.notes || '';
+        $('wz_cp').value = rs.contactPerson || ''; $('wz_ph').value = rs.phone || ''; $('wz_ad').value = rs.address || ''; $('wz_web').value = rs.web || '';
+        $('wzFees').innerHTML = ''; $('wzAm').innerHTML = ''; wizLine('wzFees', true); wizLine('wzAm', false);
+        $('wizBg').style.display = 'flex'; document.documentElement.classList.add('modal-open');
+        wizShow(); wizInv();
+      })
+      .withFailureHandler(function(e){ WZ = null; authFail(e); })
+      .setupWizardBegin(TOKEN);
+  }
+  function wizLine(box, fee) {
+    var d = document.createElement('div'); d.className = 'wiz-line' + (fee ? '' : ' am');
+    d.innerHTML = '<input type="text" data-f="name" maxlength="60" placeholder="' + (fee ? 'LPG' : 'Wi-Fi') + '">' +
+      (fee ? '<input type="text" data-f="amount" inputmode="decimal" placeholder="500">' : '') +
+      '<button class="ghost" type="button" aria-label="Remove">&times;</button>';
+    d.querySelector('button').onclick = function(){ d.remove(); wizPreview(); };
+    d.querySelectorAll('input').forEach(function(x){ x.addEventListener('input', wizPreview); });
+    $(box).appendChild(d);
+  }
+  function wizCfg() {
+    var rs = RESORTS[DEFAULT_RESORT] || {}, c = {};
+    for (var k in rs) c[k] = rs[k];
+    var name = $('wz_name').value.trim() || 'My Resort';
+    c.name = name; if (!rs.headerName || rs.headerName === rs.name) c.headerName = name;
+    c.style = $('wz_style').value; c.c1 = $('wz_c1').value; c.c2 = $('wz_c2').value;
+    c.contactPerson = $('wz_cp').value.trim(); c.phone = $('wz_ph').value.trim(); c.address = $('wz_ad').value.trim(); c.web = $('wz_web').value.trim();
+    c.terms = $('wz_terms').value; c.notes = $('wz_notes').value;
+    c.invoiceMode = $('wz_mode').value; c.invoicePrefix = $('wz_pre').value;
+    c.logo = WZ && WZ.logo || ''; c.bg = WZ && WZ.bg || '';
+    return c;
+  }
+  function wizInvText() {
+    var m = $('wz_mode').value, p = $('wz_pre').value, y = new Date().getFullYear();
+    return m === 'Continuous' ? p + '00001' : m === 'Manual' ? p + '101' : p + y + '-48213';
+  }
+  function wizInv() { $('wzInvX').textContent = ($('wz_mode').value === 'Manual' ? 'typed by you, e.g. ' : '') + wizInvText(); wizPreview(); }
+  function wizFees() {
+    var out = [];
+    $('wzFees').querySelectorAll('.wiz-line').forEach(function(l){ var n = l.querySelector('[data-f=name]').value.trim(), a = Number(l.querySelector('[data-f=amount]').value.replace(/[^0-9.]/g, '')) || 0; if (n) out.push({name: n, amount: a}); });
+    return out;
+  }
+  function wizAmen() { var out = []; $('wzAm').querySelectorAll('[data-f=name]').forEach(function(x){ if (x.value.trim()) out.push(x.value.trim()); }); return out; }
+  function wizPreview() {
+    if ($('wz_c1t')) { $('wz_c1t').textContent = $('wz_c1').value; $('wz_c2t').textContent = $('wz_c2').value; }
+    if (!WZ || (WZ.i !== 2 && WZ.i !== 5)) return;
+    var box = $(WZ.i === 2 ? 'wzPrev2' : 'wzPrev5'), sc = box.querySelector('.scaler');
+    try {
+      var cfg = wizCfg(), root = document.createElement('div'); root.className = 'receipt';
+      mountReceiptCfg(root, cfg);
+      var t = new Date(), iso = t.getFullYear() + '-' + pad2(t.getMonth() + 1) + '-' + pad2(t.getDate()), d = addDays(iso, 14);
+      fillMap(root, receiptMap({name:'Juan Dela Cruz', contact:'0917 123 4567', address:'Quezon City', invoiceNo: wizInvText(), dpDate: iso, bookingFee: 5000, downPayment: 1500,
+        balance: 3500, mode: 'GCash', checkIn: d + 'T08:00', checkOut: d + 'T17:00', pax: 8, marketer: '', roomsIncluded: '', extraField1: '', extraField2: '', extraField3: ''}));
+      var rows = wizFees().map(function(f){ return {name: f.name, p: f.amount, d: '', q: 1, on: true}; });
+      if (!rows.length) rows = [{name: 'Extra item', p: 300, d: 'per item', q: 1, on: true}];
+      renderReceiptFees(root, rows); setFeeCell(root, rows, '');
+      sc.innerHTML = ''; sc.appendChild(root);
+      var s = Math.min(1, (box.clientWidth || 320) / 800);
+      sc.style.transform = 'scale(' + s + ')'; box.style.height = Math.ceil(root.offsetHeight * s) + 'px';
+    } catch (e) { sc.innerHTML = ''; }
+  }
+  function wizShow() {
+    var i = WZ.i;
+    for (var p = 1; p <= 6; p++) $('wizP' + p).style.display = p === i ? 'block' : 'none';
+    $('wizSub').textContent = 'Step ' + i + ' of 6';
+    $('wizBar').style.width = Math.round(i / 6 * 100) + '%';
+    $('wizBack').style.visibility = i > 1 ? 'visible' : 'hidden';
+    $('wizNext').innerHTML = i === 6 ? 'Finish &#10003;' : 'Next &rarr;';
+    var h = ''; for (var n = 1; n <= 6; n++) h += '<div class="wiz-dot ' + (n === i ? 'on' : WZ.st[n] === 'done' ? 'done' : WZ.st[n] === 'skip' ? 'skip' : '') + '">' + (WZ.st[n] === 'done' && n !== i ? '&#10003;' : n) + '</div>';
+    $('wizDots').innerHTML = h; $('wizMsg').textContent = '';
+    $('wizBg').scrollTop = 0;
+    setTimeout(wizPreview, 0);
+  }
+  function wizStep(how) {
+    if (!WZ || WZ.busy) return;
+    if (how === 'done') {
+      if (WZ.i === 1 && !$('wz_name').value.trim()) { $('wizMsg').textContent = 'Enter your resort name, or press Skip to use "My Resort".'; $('wz_name').focus(); return; }
+      if (WZ.i === 6) {
+        var t = [['wz_dIn', 'wz_dOut', 'Day Tour'], ['wz_nIn', 'wz_nOut', 'Overnight']];
+        for (var k = 0; k < t.length; k++) if (!$(t[k][0]).value || !$(t[k][1]).value) { $('wizMsg').textContent = t[k][2] + ': choose both a check-in and a check-out time.'; return; }
+      }
+    }
+    WZ.st[WZ.i] = how;
+    if (WZ.i < 6) { WZ.i++; wizShow(); } else wizFinish(false);
+  }
+  function wizFinish(all) {
+    if (!WZ || WZ.busy) return;
+    if (all) for (var n = 1; n <= 6; n++) if (WZ.st[n] !== 'done') WZ.st[n] = 'skip';
+    var S = WZ.st, d = {skippedAll: !!all};
+    if (S[1] === 'done') d.step1 = {name: $('wz_name').value.trim()};
+    if (S[2] === 'done') d.step2 = {style: $('wz_style').value, c1: $('wz_c1').value, c2: $('wz_c2').value};
+    if (S[3] === 'done') d.step3 = {invoiceMode: $('wz_mode').value, invoicePrefix: $('wz_pre').value};
+    if (S[4] === 'done') d.step4 = {contactPerson: $('wz_cp').value, phone: $('wz_ph').value, address: $('wz_ad').value, web: $('wz_web').value};
+    if (S[5] === 'done') d.step5 = {terms: $('wz_terms').value, notes: $('wz_notes').value};
+    if (S[6] === 'done') d.step6 = {dayIn: $('wz_dIn').value, dayOut: $('wz_dOut').value, nightIn: $('wz_nIn').value, nightOut: $('wz_nOut').value, fees: wizFees(), amenities: wizAmen()};
+    var pics = S[3] === 'done' ? [['logo', WZ.logo], ['bg', WZ.bg]].filter(function(p){ return p[1]; }) : [];
+    WZ.busy = true;
+    var btn = all ? $('wizSkipAll') : (S[6] === 'done' ? $('wizNext') : $('wizSkip'));
+    setBusy(btn, true, 'Saving...'); $('wizMsg').textContent = '';
+    var fail = function(e){ WZ.busy = false; setBusy(btn, false); if (authFail(e)) return; $('wizMsg').textContent = 'Could not save: ' + ((e && e.message) || e) + ' Please try again.'; };
+    RUN.withSuccessHandler(function(res){
+        if (!res || res.ok === false) { fail({message: (res && res.message) || 'unknown error.'}); return; }
+        var name = res.resort, adm = WZ.adm;
+        (function next(j){
+          if (j >= pics.length) { wizClose(true); return; }
+          RUN.withSuccessHandler(function(){ next(j + 1); }).withFailureHandler(function(){ next(j + 1); })
+            .saveResortImage(TOKEN, adm, name, pics[j][0], pics[j][1]);
+        })(0);
+      })
+      .withFailureHandler(fail)
+      .saveSetupWizard(TOKEN, WZ.adm, d);
+  }
+  function wizClose(saved) {
+    var skipped = WZ ? Object.keys(WZ.st).filter(function(k){ return WZ.st[k] === 'skip'; }).length : 0;
+    if (WZ) setBusy($('wizNext'), false), setBusy($('wizSkip'), false), setBusy($('wizSkipAll'), false);
+    WZ = null; if (CFG) CFG.setupWizard = false;
+    $('wizBg').style.display = 'none'; document.documentElement.classList.remove('modal-open');
+    if (saved) {
+      menuNote(skipped >= 6 ? 'Setup skipped. The standard settings were saved; change them anytime in Admin Settings.' :
+               'Setup saved' + (skipped ? ' (' + skipped + ' skipped step' + (skipped > 1 ? 's use' : ' uses') + ' the standard settings)' : '') + '. You can change everything later in Admin Settings.');
+      loadConfig();
+    }
+  }
+  function wizPick(input, kind, txtId, boxId) {
+    var f = input.files && input.files[0]; if (!f) return;
+    readPicture(f, kind, function(data){ WZ[kind] = data; $(boxId).innerHTML = '<img alt="" src="' + data + '"><span>Change</span>'; }, 'wizMsg');
+    input.value = '';
+  }
+  (function(){
+    $('wizNext').onclick = function(){ wizStep('done'); };
+    $('wizSkip').onclick = function(){ wizStep('skip'); };
+    $('wizBack').onclick = function(){ if (WZ && !WZ.busy && WZ.i > 1) { WZ.i--; wizShow(); } };
+    $('wizSkipAll').onclick = function(){ wizFinish(true); };
+    $('wz_name').addEventListener('input', function(){ $('wizMsg').textContent = ''; });
+    $('wz_name').addEventListener('keydown', function(e){ if (e.key === 'Enter') wizStep('done'); });
+    ['wz_style', 'wz_c1', 'wz_c2', 'wz_terms', 'wz_notes'].forEach(function(id){ $(id).addEventListener('input', wizPreview); $(id).addEventListener('change', wizPreview); });
+    $('wz_mode').onchange = wizInv; $('wz_pre').onchange = wizInv;
+    $('wzAddFee').onclick = function(){ wizLine('wzFees', true); };
+    $('wzAddAm').onclick = function(){ wizLine('wzAm', false); };
+    [['wzLogoBox', 'wz_logo', 'logo', 'wzLogoTxt'], ['wzBgBox', 'wz_bg', 'bg', 'wzBgTxt']].forEach(function(p){
+      $(p[0]).onclick = function(){ $(p[1]).click(); };
+      $(p[0]).onkeydown = function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $(p[1]).click(); } };
+      $(p[1]).onchange = function(){ wizPick(this, p[2], p[3], p[0]); };
+    });
+    window.addEventListener('resize', function(){ if (WZ) wizPreview(); });
+  })();
   function loadConfig(cb) {
     if (!(window.google && google.script)) return;
     RUN
@@ -1845,6 +2001,7 @@
     applyConfig(bundle.config);
     fees = bundle.fees || []; renderFeeList(currentFees(),detailOf(domRows())); update(); fitPreview();
     applyBookingRefresh(bundle); sessionLoading = false; menuNote('');
+    if (CFG && CFG.setupWizard === true && !PROVIDER) openWizard();      // first sign-in of a new business
   }
   function refreshDash() {
     renderUpcomingSummary(); renderBanner(); renderBell();

@@ -2037,11 +2037,11 @@
     var h = '<tr><th>Booking type</th><th>Check-in time</th><th>Check-out time</th><th>Check-out day</th><th>Enabled</th></tr>';
     TYPE_KEYS.forEach(function(k){
       var c = T[k];
-      h += '<tr><td><b>' + TYPE_LABELS[k] + '</b></td>' +
-        '<td><input type="time" data-k="' + k + '" data-f="in" value="' + c.inT + '"></td>' +
-        '<td><input type="time" data-k="' + k + '" data-f="out" value="' + c.outT + '"></td>' +
-        '<td><select data-k="' + k + '" data-f="days"><option value="0"' + (c.days ? '' : ' selected') + '>Same day</option><option value="1"' + (c.days ? ' selected' : '') + '>Next day</option></select></td>' +
-        '<td style="text-align:center"><input type="checkbox" data-k="' + k + '" data-f="enabled" style="width:20px;height:20px"' + (c.enabled === false ? '' : ' checked') + '></td></tr>';
+      h += '<tr><td class="tt-name"><b>' + TYPE_LABELS[k] + '</b></td>' +
+        '<td data-label="Check-in"><input type="time" data-k="' + k + '" data-f="in" value="' + c.inT + '"></td>' +
+        '<td data-label="Check-out"><input type="time" data-k="' + k + '" data-f="out" value="' + c.outT + '"></td>' +
+        '<td data-label="Check-out day"><select data-k="' + k + '" data-f="days"><option value="0"' + (c.days ? '' : ' selected') + '>Same day</option><option value="1"' + (c.days ? ' selected' : '') + '>Next day</option></select></td>' +
+        '<td data-label="Enabled" class="tt-en"><input type="checkbox" data-k="' + k + '" data-f="enabled" style="width:20px;height:20px"' + (c.enabled === false ? '' : ' checked') + '></td></tr>';
     });
     $('admTimes').innerHTML = h;
     $('admFees').innerHTML = '';
@@ -3879,6 +3879,32 @@
     try { new MutationObserver(later).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] }); } catch (e) {}
     sync();
     window.RD_syncScrollLock = sync;
+  })();
+
+  /* ---------- KEYBOARD: keep the field you are typing in visible ----------
+   * On phones (and the Android app) the on-screen keyboard covers the lower half of the screen. When a field gets
+   * focus, and again when the keyboard finishes opening, the field is scrolled to the middle of what is still visible. */
+  (function () {
+    var root = document.documentElement, vv = window.visualViewport, t1 = null;
+    function isField(el) {
+      if (!el || !el.tagName) return false;
+      var tag = el.tagName, type = (el.type || '').toLowerCase();
+      return tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && ['checkbox','radio','button','submit','file','color','range','hidden'].indexOf(type) < 0) || el.isContentEditable;
+    }
+    function touch() { return (navigator.maxTouchPoints || 0) > 0 || (window.matchMedia && matchMedia('(pointer: coarse)').matches); }
+    function keyboardOpen() { return !!(vv && vv.height < window.innerHeight * 0.78); }
+    function reveal() {
+      var el = document.activeElement; if (!isField(el)) return;
+      try { el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' }); } catch (e) { try { el.scrollIntoView(false); } catch (e2) {} }
+    }
+    function sync() { root.classList.toggle('kb-open', isField(document.activeElement) && (keyboardOpen() || !vv)); }
+    document.addEventListener('focusin', function (e) {
+      if (!touch() || !isField(e.target)) return;
+      root.classList.add('kb-open');                       // make room first, then scroll (twice: before and after the keyboard opens)
+      clearTimeout(t1); setTimeout(reveal, 60); t1 = setTimeout(function () { sync(); reveal(); }, 420);
+    });
+    document.addEventListener('focusout', function () { setTimeout(sync, 120); });
+    if (vv) vv.addEventListener('resize', function () { sync(); if (keyboardOpen()) reveal(); });
   })();
 
   /* ---------- PHONE APP: stay signed in + Back button ----------

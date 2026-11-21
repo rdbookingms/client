@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=3b5508d516">
+<link rel="stylesheet" href="app.css?v=df64651f23">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -110,7 +110,9 @@
       root.style.zoom = ''; root.classList.remove('phone-fit'); applied = 1;
     }
     function fit() {
-      var layout = Math.round(window.innerWidth || root.clientWidth), device = Math.round(deviceWidth());   // innerWidth is not changed by the zoom
+      // Desktop site mode lays the page out ~980px wide. A page whose content is merely wider than the screen also makes
+      // innerWidth grow (Android widens the viewport to the content), so the layout width is clientWidth x the zoom in use.
+      var layout = Math.round(Math.min(window.innerWidth || Infinity, (root.clientWidth || window.innerWidth) * applied)), device = Math.round(deviceWidth());
       var need = touchScreen() && device > 0 && device < 1024 && layout > device * 1.15;
       var zoom = need ? layout / device : 1;
       if (Math.abs(zoom - applied) < 0.02) return;
@@ -941,7 +943,7 @@
   </div>
 </div>
 
-<script src="app.js?v=a3d9c18990"></script>
+<script src="app.js?v=2e2bf8282b"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

@@ -127,10 +127,10 @@
       '</div>' +
     '<div class="r-foot" style="background:linear-gradient(110deg,' + tintA(c1, .8, .86) + ' 0%,' + tintA(midHex(c1, c2), .8, .86) + ' 50%,' + tintA(c2, .8, .86) + ' 100%)"><div class="r-foot-grid">' +
       '<div class="r-foot-side">' + (cfg.deposit ? '<div class="deposit"><div class="t">SECURITY DEPOSIT</div><div class="a">' + esc(cfg.deposit) + '</div></div>' : '') +
-      '<h4>' + esc(cfg.exclHeading || 'Exclusions / Add-ons') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' +
+      '<div class="yb excl-box"><h4>' + esc(cfg.exclHeading || 'Exclusions / Add-ons') + '</h4><ul class="fee-list" id="p_feeList"></ul></div></div>' +
       '<div class="r-foot-terms">' + (terms.length ? '<h4>' + esc(cfg.termsHeading || 'Terms and Conditions') + '</h4><ul>' + lis(terms) + '</ul>' : '') + '</div></div>' +
       (cfg.thanks ? '<div class="thanks">' + esc(cfg.thanks) + '</div>' : '') +
-      (notes.length ? '<div class="notes"><b>Note:</b><ul>' + lis(notes) + '</ul></div>' : '') +
+      (notes.length ? '<div class="notes yb"><b>Note:</b><ul>' + lis(notes) + '</ul></div>' : '') +
     '</div>';
   }
 
@@ -150,9 +150,9 @@
     '</div>' +
     (terms.length ? '<div class="rp-rules" style="background:' + mixHex(c1, .93) + '"><div class="rp-sub">' + esc(cfg.termsHeading || 'Terms and Conditions') + '</div><ol>' + lis(terms) + '</ol></div>' : '') +
     '<div class="rp-bottom">' +
-      '<div>' + (notes.length ? '<div class="rp-note"><b>Note:</b> ' + notes.map(taggedText).join('<br>') + '</div>' : '') +
+      '<div>' + (notes.length ? '<div class="rp-note yb"><b>Note:</b> ' + notes.map(taggedText).join('<br>') + '</div>' : '') +
         (cfg.deposit ? '<div class="rp-note" style="margin-top:10px;background:#fdecea"><b>Security deposit:</b> ' + esc(cfg.deposit) + '</div>' : '') + '</div>' +
-      '<div class="rp-excl"><h4>' + esc(cfg.exclHeading || 'Exclusions') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' +
+      '<div class="rp-excl yb"><h4>' + esc(cfg.exclHeading || 'Exclusions') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' +
     '</div>' +
     '<div class="rp-thanks" style="background:' + mixHex(c1, .86) + '"><span>' + esc(cfg.thanks || '') + '</span><span class="rp-serial" id="p_invoiceNo"></span></div>';
   }

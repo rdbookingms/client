@@ -36,6 +36,7 @@
   .bk b { font-size:14.5px; }
   .bk .dt { color:var(--muted); margin-top:2px; }
   .bk.conflict { border-color:#d9534f; background:#fdecea; }
+  button.conflict-locked { opacity:.55; cursor:not-allowed; }
   .bk .tag { display:inline-block; background:#d9534f; color:#fff; font-size:11px; padding:2px 7px; border-radius:20px; margin-left:6px; }
   .toolbar { padding:10px 18px 0; display:flex; gap:8px; flex-wrap:wrap; }
   .toolbar input { flex:1; min-width:160px; }

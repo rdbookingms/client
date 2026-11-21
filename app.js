@@ -628,17 +628,36 @@
     var s1 = a1.replace('T',' '), s2 = a2.replace('T',' ');
     return s1 < b.checkOut && s2 > b.checkIn;
   }
+  /* Double-booking guard: while the check-in/check-out overlaps another active booking at the same resort,
+   * every Save button is disabled and saving is refused. (The server checks again before writing.)
+   * Editing a booking without changing its dates or resort is still allowed, so older overlaps can be fixed. */
+  var hasConflict = false;
+  var SAVE_BTNS = ['btnDownload', 'btnSaveRecord', 'btnSaveChanges', 'btnSaveGen', 'btnSaveOnly'];
+  function datesUnchanged_() { return !!(editing && editing.original && editing.original.checkIn === $('checkIn').value && editing.original.checkOut === $('checkOut').value); }
+  function conflictBlocks_() { return hasConflict && !datesUnchanged_(); }
+  var CONFLICT_MSG = 'These dates overlap another booking at this resort. Change the check-in or check-out before saving.';
+  function syncSaveLock_() {
+    var block = conflictBlocks_();
+    SAVE_BTNS.forEach(function(id){
+      var b = $(id); if (!b) return;
+      if (block) { b.disabled = true; b.title = CONFLICT_MSG; b.setAttribute('data-conflict-lock', '1'); b.classList.add('conflict-locked'); }
+      else if (b.getAttribute('data-conflict-lock')) { b.removeAttribute('data-conflict-lock'); b.title = ''; b.classList.remove('conflict-locked'); if (!saving) b.disabled = false; }
+    });
+  }
   function checkConflict() {
     var w = $('conflictWarn'), ok = $('conflictOk');
     w.style.display = ok.style.display = 'none';
-    if (!$('checkIn').value || !$('checkOut').value) return;
+    hasConflict = false;
+    if (!$('checkIn').value || !$('checkOut').value) { syncSaveLock_(); return; }
     var hits = upcoming.filter(overlaps);
     if (hits.length) {
-      w.innerHTML = 'Date conflict: ' + hits.map(function(b){
-        return b.name + ' (' + fmtDateTime(b.checkIn.replace(' ','T')) + ' to ' + fmtDateTime(b.checkOut.replace(' ','T')) + ')';
+      hasConflict = true;
+      w.innerHTML = '<b>Date conflict</b>' + (datesUnchanged_() ? ' (already saved this way; you can still save other changes)' : ' &mdash; saving is blocked until the dates are changed') + ': ' + hits.map(function(b){
+        return esc(b.name) + ' &middot; ' + esc(b.invoiceNo) + ' (' + fmtDateTime(b.checkIn.replace(' ','T')) + ' to ' + fmtDateTime(b.checkOut.replace(' ','T')) + ')';
       }).join('; ');
       w.style.display = 'block';
     } else { ok.style.display = 'block'; }
+    syncSaveLock_();
   }
   var showCanceled = false;
   function renderUpcoming() {
@@ -1322,10 +1341,12 @@
     if (saving) return;
     var missing = validate();
     if (missing.length) { setStatus('Please fill in: ' + missing.join(', '), 'err'); return; }
+    checkConflict();
+    if (conflictBlocks_()) { markMissing(['checkIn', 'checkOut']); setStatus(CONFLICT_MSG, 'err'); return; }
 
     saving = true; $('btnDownload').disabled = true; $('btnSaveRecord').disabled = true; setStatus('Saving to sheet...');
     var session = TOKEN, data = collectData($('invoiceNo').value.trim() === savedInvoice && savedInvoice !== '');
-    var done = function(msg, cls){ if (TOKEN !== session) return; saving = false; $('btnDownload').disabled = false; $('btnSaveRecord').disabled = false; setStatus(msg, cls); };
+    var done = function(msg, cls){ if (TOKEN !== session) return; saving = false; $('btnDownload').disabled = false; $('btnSaveRecord').disabled = false; syncSaveLock_(); setStatus(msg, cls); };
 
     RUN
       .withSuccessHandler(function(res){
@@ -1349,7 +1370,11 @@
           .then(function(){ finish((res.updated ? 'Booking ' + inv + ' was updated' : 'Booking ' + inv + ' was saved') + ' and the receipt was downloaded.' + extra + ' The form is ready for a new booking.'); })
           .catch(function(e){ done('Saved, but the receipt failed: ' + e.message + ' You can press Save & Download Receipt again.', 'err'); });
       })
-      .withFailureHandler(function(e){ if (TOKEN !== session || authFail(e)) return; done('Could not save: ' + e.message, 'err'); })
+      .withFailureHandler(function(e){
+        if (TOKEN !== session || authFail(e)) return;
+        if (/overlap/i.test(e.message)) { markMissing(['checkIn', 'checkOut']); loadUpcoming(); }     // someone else booked these dates first
+        done('Could not save: ' + e.message, 'err');
+      })
       .saveBooking(TOKEN, data, true);
   }
 
@@ -1458,6 +1483,8 @@
     if (!editing || saving) return;
     var missing = validate();
     if (missing.length) { setStatus('Please fill in: ' + missing.join(', '), 'err'); return; }
+    checkConflict();
+    if (conflictBlocks_()) { markMissing(['checkIn', 'checkOut']); setStatus(CONFLICT_MSG, 'err'); return; }
     var now = snapshot(), rows = [];
     DIFF_FIELDS.forEach(function(f){
       var k = f[0];
@@ -1475,9 +1502,11 @@
   }
   function setEditBusy(b) {
     ['btnSaveGen','btnSaveOnly','btnBackEdit'].forEach(function(id){ $(id).disabled = b; });
+    if (!b) syncSaveLock_();
   }
   function commitEdit(generate) {
     if (saving) return;
+    if (conflictBlocks_()) { $('editBg').style.display = 'none'; markMissing(['checkIn', 'checkOut']); setStatus(CONFLICT_MSG, 'err'); return; }
     saving = true; setEditBusy(true); setStatus('Saving changes...');
     var session = TOKEN, inv = editing.invoiceNo;
     var finish = function(msg, cls, reset) {
@@ -1497,7 +1526,7 @@
           .then(function(){ finish('Changes to ' + inv + ' were saved and the new confirmation image was downloaded.', 'ok', true); })
           .catch(function(e){ finish('Saved, but image failed: ' + e.message, 'err', false); });
       })
-      .withFailureHandler(function(e){ if (TOKEN !== session || authFail(e)) return; finish('Could not save: ' + e.message, 'err', false); })
+      .withFailureHandler(function(e){ if (TOKEN !== session || authFail(e)) return; if (/overlap/i.test(e.message)) { markMissing(['checkIn', 'checkOut']); loadUpcoming(); } finish('Could not save: ' + e.message, 'err', false); })
       .saveBooking(TOKEN, collectData(true), true);
   }
 

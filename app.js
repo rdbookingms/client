@@ -418,7 +418,7 @@
   function applyConfig(cfg) {
     imgHydrate_(cfg);
     if (cfg.license) renderSub(cfg.license);
-    CFG = cfg; CUR = cfg.settings.currency || '₱';
+    CFG = cfg; CUR = cfg.settings.currency || '₱'; applyBoxFs();
     RESORTS = {};
     cfg.resorts.forEach(function(r){ RESORTS[r.name] = r; });
     DEFAULT_RESORT = cfg.defaultResort || (cfg.resorts[0] && cfg.resorts[0].name) || '';
@@ -2404,7 +2404,22 @@
     $('bz_upcoming').checked = s.showUpcomingBanner !== false; $('bz_inhouse').checked = s.showInHouseBanner !== false; $('bz_referral').checked = s.showReferralBanner !== false;
     $('bz_agent').checked = s.agentEnabled; $('bz_pcts').value = s.agentOptions.join(', '); $('bz_pctdef').value = s.agentDefault;
     $('bz_modes').value = (s.paymentModes || []).join(', '); $('bz_proof').value = (s.proofModes || []).join(', ');
+    var fs = Math.round(Number(s.boxFontSize)) || 13, preset = [12, 13, 15, 17].indexOf(fs) >= 0;
+    $('bz_boxFs').value = preset ? String(fs) : 'c'; $('bz_boxFsPx').value = preset ? '' : fs;
+    boxFsToggle();
     bizExample();
+  }
+  function boxFsToggle() { $('bz_boxFsWrap').style.display = $('bz_boxFs').value === 'c' ? '' : 'none'; }
+  function boxFsValue() {
+    var v = $('bz_boxFs').value;
+    if (v !== 'c') return Number(v);
+    var n = Number($('bz_boxFsPx').value);
+    return ($('bz_boxFsPx').value.trim() !== '' && n === Math.round(n) && n >= 8 && n <= 22) ? n : null;
+  }
+  function applyBoxFs() {
+    var n = Math.round(Number(CFG && CFG.settings && CFG.settings.boxFontSize)) || 13;
+    if (n < 8 || n > 22) n = 13;
+    document.documentElement.style.setProperty('--rbox-fs', n + 'px');
   }
   function showBusinessLogo() {
     var img = $('bz_logoPrev');
@@ -2422,6 +2437,8 @@
   }
   function bizExample() { $('bz_example').textContent = ($('bz_prefix').value || 'INV#') + new Date().getFullYear() + '-00001'; }
   function saveBiz() {
+    var boxFs = boxFsValue();
+    if (boxFs === null) { admMsg('bizMsg', 'Enter a receipt box text size from 8 to 22 (whole numbers).', 'err'); $('bz_boxFsPx').focus(); return; }
     setBusy($('btnSaveBiz'), true, 'Saving...'); admMsg('bizMsg', '');
     RUN
       .withSuccessHandler(function(r){
@@ -2433,7 +2450,7 @@
       .saveSettings(TOKEN, ADMIN_TOKEN, {businessName:$('bz_name').value, currency:$('bz_cur').value, invoicePrefix:$('bz_prefix').value,
         pinCalendar:$('bz_calendar').checked, agentEnabled:$('bz_agent').checked, agentOptions:$('bz_pcts').value, agentDefault:parseFloat($('bz_pctdef').value),
         showUpcomingBanner:$('bz_upcoming').checked,showInHouseBanner:$('bz_inhouse').checked,showReferralBanner:$('bz_referral').checked,
-        taggedWords:$('bz_words').value, tagColor:$('bz_color').value,
+        taggedWords:$('bz_words').value, tagColor:$('bz_color').value, boxFontSize:boxFs,
         paymentModes:$('bz_modes').value, proofModes:$('bz_proof').value});
   }
 
@@ -3439,6 +3456,7 @@
   $('bz_removeLogo').addEventListener('click', function(){ updateBusinessLogo(''); });
   $('btnSaveBiz').addEventListener('click', saveBiz);
   $('bz_prefix').addEventListener('input', bizExample);
+  $('bz_boxFs').addEventListener('change', function(){ boxFsToggle(); if ($('bz_boxFs').value === 'c' && !$('bz_boxFsPx').value) { $('bz_boxFsPx').value = 14; $('bz_boxFsPx').focus(); } });
   // The plan includes a number of resorts; more need the provider's approval and add a monthly fee to the subscription.
   function resortsLeft(rs) { return !rs || rs.unlimited || !rs.limit || CFG.resorts.length < rs.limit; }
   function showResLimit(rs) {

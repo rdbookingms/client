@@ -429,6 +429,10 @@
   .amen-box { background:#F0FDF4 !important; border-radius:8px; border-left:4px solid #4ADE80; padding:12px 14px 12px 16px; box-sizing:border-box; margin-top:10px; color:#14262b; }
   .amen-box h4 { color:#166534; letter-spacing:.04em; } .amen-box .fee-list li svg { color:#15803d; }
   .fee-list li.fee-none span { color:#888; font-style:italic; }
+  /* Receipt box text size (Business settings, all resorts): --rbox-fs is set from the account setting */
+  .excl-box .fee-list li, .rp-excl .fee-list li, .amen-box .fee-list li { font-size:var(--rbox-fs,13px); }
+  .r-foot .excl-box h4, .r-foot .amen-box h4 { font-size:var(--rbox-fs,13px); }
+  .rp-bottom .rp-excl h4, .rp-bottom .amen-box h4 { font-size:calc(var(--rbox-fs,13px) + 1px); }
   .fee-incl { font-size:12.5px; color:var(--muted); margin:6px 0 0; line-height:1.45; } .fee-incl:empty { display:none; }
   .rp-side { align-self:start; display:flex; flex-direction:column; } .rp-side > div { width:100%; box-sizing:border-box; }
   .yb h4, .yb > b:first-child { color:#854D0E; }

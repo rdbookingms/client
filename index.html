@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=911d0de495">
+<link rel="stylesheet" href="app.css?v=c7d22b8d87">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -417,6 +417,12 @@
         <label for="bz_words">Tagged words or phrases on receipts (one per line)</label>
         <textarea id="bz_words" maxlength="2000" rows="3"></textarea>
         <label for="bz_color">Tagged word color</label><input id="bz_color" type="color" value="#ff0000">
+        <label for="bz_boxFs">Receipt box text size</label>
+        <div class="row">
+          <div><select id="bz_boxFs"><option value="12">Small (12px)</option><option value="13">Medium (13px)</option><option value="15">Large (15px)</option><option value="17">Extra large (17px)</option><option value="c">Custom</option></select></div>
+          <div id="bz_boxFsWrap" style="display:none"><input id="bz_boxFsPx" type="number" min="8" max="22" step="1" placeholder="8 to 22 (px)" aria-label="Custom receipt box text size in px"></div>
+        </div>
+        <p class="hint" style="margin-top:4px">Text size of the Exclusions / Add-ons box and the Included Amenities box on every receipt, for all resorts. Medium is the original size.</p>
         <label>Business name (shown on the main menu)</label><input id="bz_name" maxlength="80">
         <div class="row">
           <div><label>Currency symbol</label><input id="bz_cur" maxlength="4"></div>
@@ -1059,7 +1065,7 @@
   </div>
 </div>
 
-<script src="app.js?v=c31206a002"></script>
+<script src="app.js?v=ddf555227d"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

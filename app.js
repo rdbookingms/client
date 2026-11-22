@@ -2419,7 +2419,10 @@
   function applyBoxFs() {
     var n = Math.round(Number(CFG && CFG.settings && CFG.settings.boxFontSize)) || 13;
     if (n < 8 || n > 22) n = 13;
-    document.documentElement.style.setProperty('--rbox-fs', n + 'px');
+    var k = n / 13, st = document.documentElement.style;
+    var v = { fs: n, ic: Math.round(n * 1.23), gap: Math.max(4, Math.round(7 * k)), mb: Math.max(2, Math.round(5 * k)),
+              pv: Math.round(12 * k), pr: Math.round(14 * k), pl: Math.round(16 * k), mt: Math.round(10 * k), hm: Math.round(8 * k) };
+    Object.keys(v).forEach(function(key){ st.setProperty('--rbox-' + key, v[key] + 'px'); });
   }
   function showBusinessLogo() {
     var img = $('bz_logoPrev');

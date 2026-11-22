@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=01cfd9e5fb">
+<link rel="stylesheet" href="app.css?v=911d0de495">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -388,13 +388,21 @@
         <div class="adm-msg" id="admTimesMsg"></div>
       </div>
       <div class="panel adm-sec">
-        <h3>Additional fees and amenities</h3>
-        <p class="hint">These appear as checkboxes on the booking form and on the receipt for this resort. Turn Active off to hide a fee without deleting it. New prices apply to new bookings only; saved bookings keep the price they were booked at.</p>
-        <div class="adm-head"><div>Name</div><div>Amount</div><div>Description</div><div>Active</div><div></div></div>
+        <h3>Chargeable add-ons</h3>
+        <p class="hint">Items guests pay extra for. They appear as checkboxes on the booking form and on the receipt for this resort. Turn Active off to hide one without deleting it. New prices apply to new bookings only; saved bookings keep the price they were booked at.</p>
+        <div class="adm-head"><div>Name</div><div>Description</div><div>Price</div><div>Active</div><div></div></div>
         <div id="admFees"></div>
         <div class="adm-shared" id="admShared" style="display:none"></div>
-        <div class="adm-actions"><button class="ghost" id="btnAddFee" type="button">+ Add fee</button><button class="primary" id="btnSaveFees" type="button">Save Fees</button></div>
+        <div class="adm-actions"><button class="ghost" id="btnAddFee" type="button">+ Add add-on</button><button class="primary" id="btnSaveFees" type="button">Save add-ons</button></div>
         <div class="adm-msg" id="admFeesMsg"></div>
+      </div>
+      <div class="panel adm-sec">
+        <h3>Free amenities</h3>
+        <p class="hint">Included at no charge. They are not shown on the booking form: every active amenity is listed automatically in the receipt's included amenities box. Turn Active off to hide one without deleting it.</p>
+        <div class="adm-head amen"><div>Name</div><div>Description</div><div>Active</div><div></div></div>
+        <div id="admAmen"></div>
+        <div class="adm-actions"><button class="ghost" id="btnAddAmen" type="button">+ Add amenity</button><button class="primary" id="btnSaveAmen" type="button">Save amenities</button></div>
+        <div class="adm-msg" id="admAmenMsg"></div>
       </div>
     </div>
 
@@ -525,6 +533,7 @@
     </div>
     <label>Additional Fee/s (tick what the guest availed)</label>
     <div class="fee-box" id="feeList"></div>
+    <div class="fee-incl" id="feeIncl"></div>
     <div class="fee-total" id="feeTotal"></div>
     <input type="hidden" id="additionalFees"><input type="hidden" id="feesDetail">
     <div id="agentWrap">
@@ -1050,7 +1059,7 @@
   </div>
 </div>
 
-<script src="app.js?v=4d3720ded6"></script>
+<script src="app.js?v=c31206a002"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

@@ -201,7 +201,7 @@
   table.adm-t th { text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); padding:4px 6px; }
   table.adm-t td { padding:6px; vertical-align:middle; }
   table.adm-t input, table.adm-t select { padding:8px 9px; }
-  .adm-row { display:grid; grid-template-columns:2fr 120px 2fr auto auto; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid #e6eef0; }
+  .adm-row { display:grid; grid-template-columns:2fr 2fr 120px auto auto; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid #e6eef0; }
   .adm-row.off { opacity:.7; }
   .adm-row label.act { display:flex; align-items:center; gap:6px; margin:0; font-size:13px; font-weight:600; white-space:nowrap; }
   .adm-row label.act input { width:18px; height:18px; margin:0; }
@@ -236,7 +236,9 @@
   }
   /* room below the last field while the phone keyboard is open, so it can scroll above the keyboard */
   html.kb-open body { padding-bottom:45vh; }
-  .adm-head { display:grid; grid-template-columns:2fr 120px 2fr auto auto; gap:8px; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); padding:0 0 4px; }
+  .adm-head.amen, .adm-row.amen { grid-template-columns:2fr 2fr auto auto; }
+  @media (max-width:700px){ .adm-row.amen { grid-template-columns:minmax(0,1fr) auto auto; } }
+  .adm-head { display:grid; grid-template-columns:2fr 2fr 120px auto auto; gap:8px; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); padding:0 0 4px; }
   @media (max-width:700px){ .adm-head { display:none; } }
   .adm-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px; }
   .adm-actions button { padding:11px 18px; font-size:14px; }
@@ -427,6 +429,7 @@
   .amen-box { background:#F0FDF4 !important; border-radius:8px; border-left:4px solid #4ADE80; padding:12px 14px 12px 16px; box-sizing:border-box; margin-top:10px; color:#14262b; }
   .amen-box h4 { color:#166534; letter-spacing:.04em; } .amen-box .fee-list li svg { color:#15803d; }
   .fee-list li.fee-none span { color:#888; font-style:italic; }
+  .fee-incl { font-size:12.5px; color:var(--muted); margin:6px 0 0; line-height:1.45; } .fee-incl:empty { display:none; }
   .rp-side { align-self:start; display:flex; flex-direction:column; } .rp-side > div { width:100%; box-sizing:border-box; }
   .yb h4, .yb > b:first-child { color:#854D0E; }
   .yb h4 { margin-top:0; }

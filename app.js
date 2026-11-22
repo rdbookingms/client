@@ -656,14 +656,20 @@
     });
     return rows;
   }
+  // free amenities (0-priced) are not picked on the form: they go on every receipt of the resort automatically
+  function freeRowsFor(resort) {
+    return feesFor(resort).filter(function(f){ return !(Number(f.amount) > 0); }).map(function(f){ return {name:f.name, p:0, d:f.desc || '', q:1, on:true}; });
+  }
   function renderFeeList(list, detail) {
-    var rows = buildFeeRows(list, detail);
+    var rows = buildFeeRows(list, detail).filter(function(r){ return !isFreeFee(r); });
+    var free = freeRowsFor($('resort').value);
+    $('feeIncl').textContent = free.length ? 'Included free (added to the receipt automatically): ' + free.map(function(r){ return r.name; }).join(', ') : '';
     $('feeList').innerHTML = rows.length ? rows.map(function(r){
       return '<label class="fee-row" data-name="' + attr(r.name) + '" data-p="' + r.p + '" data-d="' + attr(r.d) + '">' +
         '<input type="checkbox" class="fee-cb"' + (r.on ? ' checked' : '') + '>' +
         '<span class="fee-name">' + esc(r.name) + '<small>' + esc(pesoShort(r.p) + (r.d ? ' ' + r.d : '')) + '</small></span>' +
         '<input type="number" class="fee-qty" min="1" value="' + r.q + '" title="Quantity"' + (r.on ? '' : ' style="display:none"') + '></label>';
-    }).join('') : '<div style="padding:8px 0;color:var(--muted);font-size:13px">No additional fees set up.</div>';
+    }).join('') : '<div style="padding:8px 0;color:var(--muted);font-size:13px">No chargeable add-ons set up.</div>';
     applyPaymentLock();
   }
   function domRows() {
@@ -795,8 +801,9 @@
       mode: $('mode').value, checkIn: $('checkIn').value, checkOut: $('checkOut').value,
       pax: $('pax').value, marketer: agentNameVal(), roomsIncluded:$('roomsIncluded').value,extraField1:$('extraField1').value,extraField2:$('extraField2').value,extraField3:$('extraField3').value
     }));
-    renderReceiptFees(root, rows);
-    setFeeCell(root, rows, frozen && ft ? peso(ft) + (frozen.additionalFees ? ' - ' + frozen.additionalFees : '') : '');
+    var rrows = rows.concat(freeRowsFor($('resort').value).filter(function(f){ return !rows.some(function(r){ return r.name === f.name; }); }));
+    renderReceiptFees(root, rrows);
+    setFeeCell(root, rrows, frozen && ft ? peso(ft) + (frozen.additionalFees ? ' - ' + frozen.additionalFees : '') : '');
     showAgentUI();
   }
 
@@ -2277,7 +2284,7 @@
   // ----- times and fees for one resort -----
   function renderTimesAndFees() {
     var res = $('admResort').value;
-    if (!res) { $('admTimes').innerHTML = ''; $('admFees').innerHTML = ''; return; }
+    if (!res) { $('admTimes').innerHTML = ''; $('admFees').innerHTML = ''; $('admAmen').innerHTML = ''; return; }
     var T = admData.types[res] || defaultTimes();
     var h = '<tr><th>Booking type</th><th>Check-in time</th><th>Check-out time</th><th>Check-out day</th><th>Enabled</th></tr>';
     TYPE_KEYS.forEach(function(k){
@@ -2289,34 +2296,41 @@
         '<td data-label="Enabled" class="tt-en"><input type="checkbox" data-k="' + k + '" data-f="enabled" style="width:20px;height:20px"' + (c.enabled === false ? '' : ' checked') + '></td></tr>';
     });
     $('admTimes').innerHTML = h;
-    $('admFees').innerHTML = '';
+    $('admFees').innerHTML = ''; $('admAmen').innerHTML = '';
     var shared = [];
-    admData.fees.forEach(function(f){ if (f.resort === res) addFeeRow(f); else if (f.resort === 'Both') shared.push(f.name); });
-    if (!$('admFees').children.length) $('admFees').innerHTML = '<div class="adm-none" style="padding:10px 0;color:#5b6f75;font-size:13px">No fees yet for this resort. Use "+ Add fee".</div>';
+    // a 0-priced item is a free amenity: it is listed in its own section
+    admData.fees.forEach(function(f){ if (f.resort === res) addFeeRow(f, !(Number(f.amount) > 0)); else if (f.resort === 'Both') shared.push(f.name); });
+    emptyNote_('admFees'); emptyNote_('admAmen');
     var sh = $('admShared');
     sh.style.display = shared.length ? '' : 'none';
     sh.textContent = shared.length ? 'Shared with all resorts (set to "Both" in the Fees sheet, change them there): ' + shared.join(', ') : '';
     admDirty = {times:false, fees:false};
   }
-  function addFeeRow(f) {
-    var none = $('admFees').querySelector('.adm-none'); if (none) none.remove();
+  function emptyNote_(id) {
+    if ($(id).children.length) return;
+    $(id).innerHTML = '<div class="adm-none" style="padding:10px 0;color:#5b6f75;font-size:13px">' + (id === 'admAmen' ? 'No free amenities yet for this resort. Use "+ Add amenity".' : 'No chargeable add-ons yet for this resort. Use "+ Add add-on".') + '</div>';
+  }
+  function addFeeRow(f, free) {
+    var box = $(free ? 'admAmen' : 'admFees');
+    var none = box.querySelector('.adm-none'); if (none) none.remove();
     var d = document.createElement('div');
-    d.className = 'adm-row' + (f && f.active === false ? ' off' : '');
-    d.innerHTML = '<input class="nm" data-f="name" placeholder="Fee or amenity name" maxlength="60">' +
-      '<input data-f="amount" type="number" min="0" step="0.01" placeholder="0.00">' +
-      '<input class="ds" data-f="desc" placeholder="e.g. per pet (optional)">' +
+    d.className = 'adm-row' + (free ? ' amen' : '') + (f && f.active === false ? ' off' : '');
+    d.innerHTML = '<input class="nm" data-f="name" placeholder="' + (free ? 'Amenity name, e.g. Wi-Fi' : 'Add-on name, e.g. LPG') + '" maxlength="60">' +
+      '<input class="ds" data-f="desc" placeholder="' + (free ? 'e.g. whole resort (optional)' : 'e.g. per tank (optional)') + '">' +
+      (free ? '' : '<input data-f="amount" type="number" min="0.01" step="0.01" placeholder="0.00">') +
       '<label class="act"><input data-f="active" type="checkbox"> Active</label>' +
-      '<button type="button" class="rm" title="Remove this fee">&#10005;</button>';
+      '<button type="button" class="rm" title="Remove">&#10005;</button>';
     d.querySelector('[data-f=name]').value = f ? f.name : '';
-    d.querySelector('[data-f=amount]').value = f ? f.amount : '';
+    if (!free) d.querySelector('[data-f=amount]').value = f ? f.amount : '';
     d.querySelector('[data-f=desc]').value = f ? f.desc : '';
     d.querySelector('[data-f=active]').checked = f ? f.active !== false : true;
-    $('admFees').appendChild(d);
+    box.appendChild(d);
     return d;
   }
   function markDirty(which) {
     admDirty[which] = true;
-    admMsg(which === 'times' ? 'admTimesMsg' : 'admFeesMsg', 'You have unsaved changes.', 'dirty');
+    if (which === 'times') admMsg('admTimesMsg', 'You have unsaved changes.', 'dirty');
+    else { admMsg('admFeesMsg', 'You have unsaved changes.', 'dirty'); admMsg('admAmenMsg', 'You have unsaved changes.', 'dirty'); }
   }
   function saveTimes() {
     var res = $('admResort').value, t = {};
@@ -2336,29 +2350,46 @@
       .withFailureHandler(function(e){ setBusy($('btnSaveTimes'), false); if (admFail(e)) return; admMsg('admTimesMsg', 'Could not save: ' + e.message, 'err'); })
       .saveTypeTimes(TOKEN, ADMIN_TOKEN, res, t);
   }
-  function saveFees() {
-    var res = $('admResort').value, items = [];
-    Array.prototype.forEach.call($('admFees').querySelectorAll('.adm-row'), function(r){
-      var name = r.querySelector('[data-f=name]').value.trim(), amt = r.querySelector('[data-f=amount]').value;
-      if (!name && amt === '' && !r.querySelector('[data-f=desc]').value.trim()) return;      // ignore blank rows
-      items.push({name:name, amount: amt === '' ? NaN : parseFloat(amt), desc:r.querySelector('[data-f=desc]').value.trim(), active:r.querySelector('[data-f=active]').checked});
-    });
-    for (var i = 0; i < items.length; i++) {
-      if (!items[i].name) { admMsg('admFeesMsg', 'Please enter a name for every fee.', 'err'); return; }
-      if (isNaN(items[i].amount)) { admMsg('admFeesMsg', 'Please enter an amount for "' + items[i].name + '".', 'err'); return; }
+  // Both sections are one list in the Fees sheet (amenities are stored at 0), so either Save button saves both.
+  function saveFees(which) {
+    var res = $('admResort').value, items = [], seen = {};
+    var msgId = which === 'amen' ? 'admAmenMsg' : 'admFeesMsg', btn = $(which === 'amen' ? 'btnSaveAmen' : 'btnSaveFees');
+    var other = which === 'amen' ? 'admFeesMsg' : 'admAmenMsg';
+    function err(id, t) { admMsg(id, t, 'err'); if (id !== msgId) admMsg(msgId, 'Fix the message in the other section first.', 'err'); }
+    var rowsC = $('admFees').querySelectorAll('.adm-row'), rowsF = $('admAmen').querySelectorAll('.adm-row');
+    for (var i = 0; i < rowsC.length; i++) {
+      var r = rowsC[i], name = r.querySelector('[data-f=name]').value.trim(), amt = r.querySelector('[data-f=amount]').value, desc = r.querySelector('[data-f=desc]').value.trim();
+      if (!name && amt === '' && !desc) continue;      // ignore blank rows
+      if (!name) return err('admFeesMsg', 'Please enter a name for every add-on.');
+      var n = parseFloat(amt);
+      if (!(n > 0)) return err('admFeesMsg', '"' + name + '": enter a price above 0. Items included free belong under Free amenities.');
+      items.push({name:name, amount:n, desc:desc, active:r.querySelector('[data-f=active]').checked});
     }
-    setBusy($('btnSaveFees'), true, 'Saving...'); admMsg('admFeesMsg', '');
+    for (var j = 0; j < rowsF.length; j++) {
+      var f = rowsF[j], fname = f.querySelector('[data-f=name]').value.trim(), fdesc = f.querySelector('[data-f=desc]').value.trim();
+      if (!fname && !fdesc) continue;
+      if (!fname) return err('admAmenMsg', 'Please enter a name for every amenity.');
+      items.push({name:fname, amount:0, desc:fdesc, active:f.querySelector('[data-f=active]').checked, free:true});
+    }
+    for (var k = 0; k < items.length; k++) {
+      var key = items[k].name.toLowerCase();
+      if (seen[key]) return err(items[k].free ? 'admAmenMsg' : 'admFeesMsg', '"' + items[k].name + '" is listed twice. Names must be different, also between add-ons and amenities.');
+      seen[key] = 1;
+    }
+    items = items.map(function(x){ return {name:x.name, amount:x.amount, desc:x.desc, active:x.active}; });
+    setBusy(btn, true, 'Saving...'); admMsg('admFeesMsg', ''); admMsg('admAmenMsg', '');
     RUN
       .withSuccessHandler(function(r){
-        setBusy($('btnSaveFees'), false);
-        if (!r.ok) { admMsg('admFeesMsg', r.message, 'err'); return; }
+        setBusy(btn, false);
+        if (!r.ok) { admMsg(msgId, r.message, 'err'); return; }
         admData.fees = admData.fees.filter(function(f){ return f.resort !== res; })
           .concat(items.map(function(x){ return {name:x.name, amount:x.amount, desc:x.desc, active:x.active, resort:res}; }));
         admDirty.fees = false; renderTimesAndFees();
         loadFees();      // refresh the form's checkboxes
-        admMsg('admFeesMsg', r.count + ' fee' + (r.count === 1 ? '' : 's') + ' saved for ' + res + '. New bookings will use them.', 'ok');
+        var nc = items.filter(function(x){ return x.amount > 0; }).length, nf = items.length - nc;
+        admMsg(msgId, nc + ' add-on' + (nc === 1 ? '' : 's') + ' and ' + nf + ' amenit' + (nf === 1 ? 'y' : 'ies') + ' saved for ' + res + '. New bookings will use them.', 'ok');
       })
-      .withFailureHandler(function(e){ setBusy($('btnSaveFees'), false); if (admFail(e)) return; admMsg('admFeesMsg', 'Could not save: ' + e.message, 'err'); })
+      .withFailureHandler(function(e){ setBusy(btn, false); if (admFail(e)) return; admMsg(msgId, 'Could not save: ' + e.message, 'err'); })
       .saveFeesForResort(TOKEN, ADMIN_TOKEN, res, items);
   }
 
@@ -3385,19 +3416,22 @@
   });
   $('admTimes').addEventListener('input', function(){ markDirty('times'); });
   $('admTimes').addEventListener('change', function(){ markDirty('times'); });
-  $('admFees').addEventListener('input', function(){ markDirty('fees'); });
-  $('admFees').addEventListener('change', function(e){
-    markDirty('fees');
-    if (e.target && e.target.getAttribute('data-f') === 'active') e.target.closest('.adm-row').classList.toggle('off', !e.target.checked);
+  ['admFees', 'admAmen'].forEach(function(id){
+    $(id).addEventListener('input', function(){ markDirty('fees'); });
+    $(id).addEventListener('change', function(e){
+      markDirty('fees');
+      if (e.target && e.target.getAttribute('data-f') === 'active') e.target.closest('.adm-row').classList.toggle('off', !e.target.checked);
+    });
+    $(id).addEventListener('click', function(e){
+      var b = e.target.closest ? e.target.closest('.rm') : null;
+      if (b) { b.closest('.adm-row').remove(); markDirty('fees'); emptyNote_(id); }
+    });
   });
-  $('admFees').addEventListener('click', function(e){
-    var b = e.target.closest ? e.target.closest('.rm') : null;
-    if (b) { b.closest('.adm-row').remove(); markDirty('fees');
-      if (!$('admFees').children.length) $('admFees').innerHTML = '<div class="adm-none" style="padding:10px 0;color:#5b6f75;font-size:13px">No fees for this resort. Use "+ Add fee".</div>'; }
-  });
-  $('btnAddFee').addEventListener('click', function(){ var r = addFeeRow(null); markDirty('fees'); r.querySelector('[data-f=name]').focus(); });
+  $('btnAddFee').addEventListener('click', function(){ var r = addFeeRow(null, false); markDirty('fees'); r.querySelector('[data-f=name]').focus(); });
+  $('btnAddAmen').addEventListener('click', function(){ var r = addFeeRow(null, true); markDirty('fees'); r.querySelector('[data-f=name]').focus(); });
+  $('btnSaveAmen').addEventListener('click', function(){ saveFees('amen'); });
   $('btnSaveTimes').addEventListener('click', saveTimes);
-  $('btnSaveFees').addEventListener('click', saveFees);
+  $('btnSaveFees').addEventListener('click', function(){ saveFees('fees'); });
   $('bz_logo').addEventListener('change', function(){
     var file = this.files[0]; this.value = '';
     if (file) readPicture(file, 'logo', updateBusinessLogo, 'bizMsg');

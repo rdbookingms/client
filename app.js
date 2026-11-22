@@ -134,13 +134,17 @@
       '</div>' +
     '<div class="r-foot" style="background:linear-gradient(110deg,' + tintA(c1, .8, .86) + ' 0%,' + tintA(midHex(c1, c2), .8, .86) + ' 50%,' + tintA(c2, .8, .86) + ' 100%)"><div class="r-foot-grid">' +
       '<div class="r-foot-side">' + (cfg.deposit ? '<div class="deposit"><div class="t">SECURITY DEPOSIT</div><div class="a">' + esc(cfg.deposit) + '</div></div>' : '') +
-      '<div class="yb excl-box"><h4>' + esc(cfg.exclHeading || 'Exclusions / Add-ons') + '</h4><ul class="fee-list" id="p_feeList"></ul></div></div>' +
+      '<div class="yb excl-box"><h4>' + esc(cfg.exclHeading || 'Exclusions / Add-ons') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' + amenBox(cfg) + '</div>' +
       '<div class="r-foot-terms">' + (terms.length ? '<h4>' + esc(cfg.termsHeading || 'Terms and Conditions') + '</h4><ul' + listAttr(cfg, 'terms') + '>' + lis(terms) + '</ul>' : '') + '</div></div>' +
       (cfg.thanks ? '<div class="thanks">' + esc(cfg.thanks) + '</div>' : '') +
       (notes.length ? '<div class="notes yb"><b>Note:</b><ul' + listAttr(cfg, 'notes') + '>' + lis(notes) + '</ul></div>' : '') +
     '</div>';
   }
 
+  // free (0-priced) add-ons get their own green box; hidden until renderReceiptFees finds some
+  function amenBox(cfg) {
+    return '<div class="amen-box" id="p_amenBox" style="display:none"><h4>' + esc(cfg.amenTitle || 'INCLUDED AMENITIES') + '</h4><ul class="fee-list" id="p_amenList"></ul></div>';
+  }
   // ----- Classic layout (plain "reservation receipt" look) -----
   function classicHTML(cfg) {
     var L = cfg.labels, c1 = cfg.c1, c2 = cfg.c2;
@@ -159,7 +163,7 @@
     '<div class="rp-bottom">' +
       '<div>' + (notes.length ? '<div class="rp-note yb"><b>Note:</b><ul' + listAttr(cfg, 'notes') + '>' + lis(notes) + '</ul></div>' : '') +
         (cfg.deposit ? '<div class="rp-note" style="margin-top:10px;background:#fdecea"><b>Security deposit:</b> ' + esc(cfg.deposit) + '</div>' : '') + '</div>' +
-      '<div class="rp-excl yb"><h4>' + esc(cfg.exclHeading || 'Exclusions') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' +
+      '<div class="rp-side"><div class="rp-excl yb"><h4>' + esc(cfg.exclHeading || 'Exclusions') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' + amenBox(cfg) + '</div>' +
     '</div>' +
     '<div class="rp-thanks" style="background:' + mixHex(c1, .86) + '"><span>' + esc(cfg.thanks || '') + '</span><span class="rp-serial" id="p_invoiceNo"></span></div>';
   }
@@ -171,6 +175,7 @@
     root.classList.toggle('pansol', cfg.style === 'Classic');
     root.style.background = cfg.style === 'Classic' ? 'linear-gradient(180deg,' + mixHex(cfg.c1, .92) + ' 0%,#ffffff 45%)' : '#fff';
     root.innerHTML = cfg.style === 'Classic' ? classicHTML(cfg) : modernHTML(cfg);
+    root.__cfg = cfg;                                  // add-on display mode, used by renderReceiptFees
     renderBookingDetails(root, cfg);
     applyReceiptVisibility(root, cfg);
   }
@@ -675,15 +680,23 @@
       return r.name + (r.q > 1 ? ' x' + r.q : '') + ' (' + pesoShort(r.p * r.q) + ')';
     }).join('; ');
   }
+  function isFreeFee(r) { return !(Number(r.p) > 0); }      // a 0-priced add-on is a free amenity
   function renderReceiptFees(root, rows) {
     var ul = root.querySelector('#p_feeList'); if (!ul) return;
-    ul.innerHTML = rows.map(function(r){
+    var cfg = root.__cfg || {}, availedOnly = cfg.addonMode === 'Availed';
+    var paid = rows.filter(function(r){ return !isFreeFee(r) && (!availedOnly || r.on); }), free = rows.filter(isFreeFee);
+    ul.innerHTML = paid.length ? paid.map(function(r){
       return '<li>' + (r.on ? CHECK_SVG : CROSS_SVG) + '<span>' + esc(feeLabel(r)) + (r.on && r.q > 1 ? ' &times; ' + r.q : '') + '</span></li>';
-    }).join('');
+    }).join('') : '<li class="fee-none"><span>' + (availedOnly ? 'No add-ons availed' : 'None') + '</span></li>';
+    var box = root.querySelector('#p_amenBox'), al = root.querySelector('#p_amenList');
+    if (box && al) {
+      box.style.display = free.length ? '' : 'none';
+      al.innerHTML = free.map(function(r){ return '<li>' + CHECK_SVG + '<span>' + esc(r.name) + (r.d && !/^free$/i.test(r.d) ? ' (' + esc(r.d) + ')' : '') + '</span></li>'; }).join('');
+    }
   }
   function setFeeCell(root, rows, legacyText) {
     var cell = root.querySelector('#p_additionalFees'); if (!cell) return;
-    var on = rows.filter(function(r){ return r.on; });
+    var on = rows.filter(function(r){ return r.on && !isFreeFee(r); });      // free amenities have their own box
     if (!on.length) { cell.textContent = legacyText || 'None'; return; }
     cell.innerHTML = '<b>' + esc(peso(feesTotal(rows))) + '</b><div class="fee-sum">' +
       esc(on.map(function(r){ return r.name + (r.q > 1 ? ' x' + r.q : ''); }).join(', ')) + '</div>';
@@ -1084,8 +1097,31 @@
   /* ---------- booking type (date + 5 options) ---------- */
   var TYPE_KEYS = ['day','overnight','morning22','evening22'];
   var TYPE_LABELS = {day:'Day Tour', overnight:'Overnight', morning22:'22 Hours (Morning slot)', evening22:'22 Hours (Evening slot)', custom:'Custom Date and Time'};
+  var SHADE_DEFAULT = {day:'#5fcf6b', overnight:'#ffd43b', morning22:'#7cc9f0', evening22:'#1f3a8f', custom:'#b98ce8'};
   var TYPE_COLORS = {day:'#5fcf6b', overnight:'#ffd43b', morning22:'#7cc9f0', evening22:'#1f3a8f', custom:'#b98ce8'};
   var TYPE_TEXT   = {day:'#0d3b17', overnight:'#4a3500', morning22:'#08324d', evening22:'#ffffff', custom:'#1d0b36'};   // readable text on each colour (WCAG 5:1 or better)
+  var TEXT_DEFAULT = {day:'#0d3b17', overnight:'#4a3500', morning22:'#08324d', evening22:'#ffffff', custom:'#1d0b36'};
+  // Each resort can choose its own calendar colours (Admin Settings). Every calendar, legend, day-details view and
+  // downloaded image is drawn with the colours of the resort it shows; labels switch to black or white text to stay readable.
+  function lumOf(hex) {
+    var n = parseInt(String(hex).slice(1), 16), f = function(x){ x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(n >> 16) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+  }
+  function inkFor(hex) { return lumOf(hex) > 0.33 ? '#111111' : '#ffffff'; }
+  function darkHex(hex, t) { var n = parseInt(String(hex).slice(1), 16); return '#' + [n >> 16, (n >> 8) & 255, n & 255].map(function(v){ return ('0' + Math.round(v * (1 - t)).toString(16)).slice(-2); }).join(''); }
+  function shadesOf(resort) { var r = typeof resort === 'string' ? RESORTS[resort] : null; return r && r.shades ? r.shades : (resort && typeof resort === 'object' ? resort : null); }
+  function applyShades(sh) {
+    Object.keys(SHADE_DEFAULT).forEach(function(k){
+      var c = sh && /^#[0-9a-fA-F]{6}$/.test(String(sh[k] || '')) ? String(sh[k]).toLowerCase() : SHADE_DEFAULT[k];
+      // custom labels often sit half on the band and half on white: a dark shade of the colour (with a light halo) reads on both
+      TYPE_COLORS[k] = c; TYPE_TEXT[k] = c === SHADE_DEFAULT[k] ? TEXT_DEFAULT[k] : (k === 'custom' ? darkHex(c, .72) : inkFor(c));
+    });
+    var out = {}; for (var k in TYPE_COLORS) out[k] = TYPE_COLORS[k]; return out;
+  }
+  function keyHtml_() {
+    return TYPE_KEYS.concat(['custom']).map(function(k){ return '<span class="key"><i style="background:' + TYPE_COLORS[k] + '"></i>' + TYPE_LABELS[k] + '</span>'; }).join('') +
+      '<span class="key"><i style="background:repeating-linear-gradient(45deg,' + TYPE_COLORS.day + ' 0 3px,' + TYPE_COLORS.overnight + ' 3px 6px)"></i>Overlap</span>';
+  }
   // Times are loaded from the 'Booking Types' sheet (one set per resort); these are only the starting defaults.
   function defaultTimes() {
     return {
@@ -1184,11 +1220,7 @@
     return (h % 12 || 12) + (m ? ':' + pad2(m) : '') + (h >= 12 ? 'p' : 'a');
   }
   function dstr(y, m, d) { var x = new Date(y, m, d); return x.getFullYear() + '-' + pad2(x.getMonth() + 1) + '-' + pad2(x.getDate()); }
-  function fillKey() {
-    $('calKey').innerHTML = TYPE_KEYS.concat(['custom']).map(function(k){
-      return '<span class="key"><i style="background:' + TYPE_COLORS[k] + '"></i>' + TYPE_LABELS[k] + '</span>';
-    }).join('');
-  }
+  function fillKey() { applyShades(shadesOf($('calResort').value)); $('calKey').innerHTML = keyHtml_(); }
   function openCalendar() {
     var d = $('stayDate').value ? new Date($('stayDate').value + 'T00:00:00') : new Date();
     calY = d.getFullYear(); calM = d.getMonth();
@@ -1285,6 +1317,7 @@
   function buildCalModel(list, context) {
     context = context || { y:calY, m:calM, resort:$('calResort').value };
     var y = context.y, m = context.m, resort = context.resort, times = context.types || BT(resort);
+    var shades = applyShades(context.shades || shadesOf(resort));      // this resort's calendar colours
     var bks = list.map(function(b){
       var t = TYPE_COLORS[b.bookType] ? b.bookType : inferType(b.checkIn.replace(' ', 'T'), b.checkOut.replace(' ', 'T'), resort, times).type || 'custom';
       return {id:b.id, type:t, checkIn:b.checkIn, checkOut:b.checkOut, s:pdate(b.checkIn), e:pdate(b.checkOut)};
@@ -1327,9 +1360,9 @@
       cells.push(c);
     });
     cells.sort(function(a, b){ return a.d - b.d; });
-    return {y:y, m:m, firstDow:new Date(y, m, 1).getDay(), days:days, cells:cells, resort:resort};
+    return {y:y, m:m, firstDow:new Date(y, m, 1).getDay(), days:days, cells:cells, resort:resort, shades:shades};
   }
-  function haloOf_(type) { return type === 'custom' ? '#f1e8fc' : TYPE_COLORS[type]; }   // custom labels often sit half on the band, half on white
+  function haloOf_(type) { return type === 'custom' ? (TYPE_COLORS.custom === SHADE_DEFAULT.custom ? '#f1e8fc' : mixHex(TYPE_COLORS.custom, .82)) : TYPE_COLORS[type]; }   // custom labels often sit half on the band, half on white
   // labels on a striped (shared) triangle use dark text with a white outline so they stay readable over both colours
   function labCol_(x, striped) { return striped ? {c:'#102a30', h:'#ffffff'} : {c:TYPE_TEXT[x.type], h:haloOf_(x.type)}; }
   function fillCss_(types) {
@@ -1342,6 +1375,7 @@
   }
   // Both login and authenticated calendars use exactly the same cells, colours and time-slot labels.
   function calendarHtml(model) {
+    if (model && model.shades) applyShades(model.shades);
     var now = new Date(), html = '';
     ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(function(w){ html += '<div class="cal-dow">' + w + '</div>'; });
     for (var i = 0; i < model.firstDow; i++) html += '<div class="cal-cell blank" aria-hidden="true"></div>';
@@ -1387,6 +1421,7 @@
     var model = calModel; withLogo(calLogoSrc(), function(logo){drawCalendarImage(logo,model);});
   }
   function drawCalendarImage(logoImg, model) {
+    if (model && model.shades) applyShades(model.shades);
     var M = model || calModel, SC = 2, W = 1000, pad = 28, gap = 5;
     var cw = Math.floor((W - pad * 2 - gap * 6) / 7), ch = Math.round(cw * 0.9);
     var rows = Math.ceil((M.firstDow + M.days) / 7);
@@ -1792,6 +1827,15 @@
   $('calNext').addEventListener('click', function(){ calMove(1); });
   $('calToday').addEventListener('click', function(){ var n = new Date(); calY = n.getFullYear(); calM = n.getMonth(); loadCalendar(); });
   $('calResort').addEventListener('change', function(){ fillKey(); loadCalendar(); });
+  $('re_shades').addEventListener('input', function(e){
+    var k = e.target.getAttribute && e.target.getAttribute('data-shade'); if (!k) return;
+    var b = $('re_shades').querySelector('[data-shade-reset="' + k + '"]'); if (b) b.disabled = e.target.value.toLowerCase() === SHADE_DEFAULT[k];
+  });
+  $('re_shades').addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('[data-shade-reset]') : null; if (!b) return;
+    var k = b.getAttribute('data-shade-reset'), i = $('re_shades').querySelector('[data-shade="' + k + '"]'); if (i) i.value = SHADE_DEFAULT[k]; b.disabled = true;
+  });
+  $('re_shadeReset').addEventListener('click', function(){ renderShadeEditor({}); });
   $('checkIn').addEventListener('change', checkConflict);
   $('checkOut').addEventListener('change', checkConflict);
   $('proofFile').addEventListener('change', function(){
@@ -2392,6 +2436,8 @@
       var st = bulletOf(d, x[1]), b = d.bullets && d.bullets[x[1]] || {};
       $(x[0] + 'On').checked = st !== 'off'; $(x[0] + 'Style').value = st === 'off' ? (b.style || 'disc') : st; $(x[0] + 'Style').disabled = st === 'off';
     });
+    $('re_addonMode').value = d.addonMode === 'Availed' ? 'Availed' : 'All'; $('re_amenTitle').value = d.amenTitle || '';
+    renderShadeEditor(d.shades || {});
     $('re_excl').value = d.exclHeading; $('re_thanks').value = d.thanks; $('re_sigL').value = d.sigLeft; $('re_sigR').value = d.sigRight;
     $('re_invMode').value = d.invoiceMode || 'Random'; $('re_invPrefix').value = d.invoicePrefix || ''; $('re_invNext').value = d.invoiceNext || 1;
     $('re_requiredFields').innerHTML = Object.keys(REQUIRED_FIELDS).map(function(k){return '<label><input type="checkbox" data-re-required="' + k + '"' + ((d.optional || []).indexOf(k) < 0 ? ' checked' : '') + '>' + esc(REQUIRED_FIELDS[k]) + '</label>';}).join('');
@@ -2470,6 +2516,17 @@
   function numOrNull(n) { return (typeof n === 'number' && isFinite(n)) ? n : null; }      // an empty box must not be sent as NaN
   function ownVal() { var r = document.querySelector('input[name=reOwn]:checked'); return r ? r.value : 'Owned'; }
   function showRentBox() { $('re_rentBox').style.display = ownVal() === 'Rented' ? '' : 'none'; }
+  // calendar colour pickers of the resort editor (one per booking type, each with its own reset)
+  function renderShadeEditor(sh) {
+    $('re_shades').innerHTML = Object.keys(SHADE_DEFAULT).map(function(k){
+      var c = sh && /^#[0-9a-fA-F]{6}$/.test(String(sh[k] || '')) ? String(sh[k]).toLowerCase() : SHADE_DEFAULT[k];
+      return '<div class="shade-row"><span>' + esc(TYPE_LABELS[k]) + '</span><input type="color" data-shade="' + k + '" value="' + c + '" aria-label="' + esc(TYPE_LABELS[k]) + ' color">' +
+        '<button class="ghost-btn" type="button" data-shade-reset="' + k + '"' + (c === SHADE_DEFAULT[k] ? ' disabled' : '') + '>Reset</button></div>';
+    }).join('');
+  }
+  function shadeEditorValue() {
+    var o = {}; Array.prototype.forEach.call(document.querySelectorAll('#re_shades [data-shade]'), function(i){ o[i.getAttribute('data-shade')] = i.value.toLowerCase(); }); return o;
+  }
   function editorCfg() {
     var name = $('re_name').value.trim();
     var custom = {autoHideEmpty:$('re_customHideEmpty').checked};
@@ -2487,6 +2544,7 @@
       contactPerson: $('re_person').value.trim(), phone: $('re_phone').value.trim(), address: $('re_address').value.trim(), web: $('re_web').value.trim(),
       c1: $('re_c1').value, c2: $('re_c2').value, terms: $('re_terms').value, notes: $('re_notes').value, deposit: $('re_deposit').value.trim(),
       bullets: {terms:{on:$('re_tbOn').checked, style:$('re_tbStyle').value}, notes:{on:$('re_nbOn').checked, style:$('re_nbStyle').value}},
+      addonMode: $('re_addonMode').value, amenTitle: $('re_amenTitle').value.trim(), shades: shadeEditorValue(),
       exclHeading: $('re_excl').value.trim() || 'Exclusions / Add-ons', thanks: $('re_thanks').value.trim(), termsHeading: $('re_termsHead').value.trim() || 'Terms and Conditions',
       sigLeft: $('re_sigL').value.trim(), sigRight: $('re_sigR').value.trim(),
       ownership: ownVal(), rentTotal: numOrNull(parseFloat($('re_rentTotal').value)), rentTermValue: numOrNull(parseInt($('re_termVal').value, 10)),
@@ -2566,7 +2624,7 @@
     var d = addDays(iso, 14);
     fillMap(root, receiptMap({name:'Juan Dela Cruz', contact:'0917 123 4567', address:'Quezon City', invoiceNo:(CFG.settings.invoicePrefix || 'INV#') + t.getFullYear() + '-00001',
       dpDate:iso, bookingFee:5000, downPayment:1500, balance:3500, mode:'GCash', checkIn:d + 'T08:00', checkOut:d + 'T17:00', pax:8, marketer:'Ana',roomsIncluded:'Rooms 1 and 2',extraField1:'Sample detail',extraField2:'',extraField3:''}));
-    var rows = [{name:'Extra item', p:300, d:'per item', q:1, on:true}, {name:'Another item', p:500, d:'', q:1, on:false}];
+    var rows = [{name:'Extra item', p:300, d:'per item', q:1, on:true}, {name:'Another item', p:500, d:'', q:1, on:false}, {name:'Wi-Fi', p:0, d:'Free', q:1, on:true}, {name:'Pool access', p:0, d:'Free', q:1, on:true}];
     renderReceiptFees(root, rows); setFeeCell(root, rows, '');
     return root;
   }
@@ -4037,9 +4095,9 @@
         $('pcStatus').textContent = ''; $('pcResort').innerHTML = r.resorts.map(function(n){return '<option>' + esc(n) + '</option>';}).join(''); $('pcResort').value = r.resort;
         $('pcHeading').textContent = r.business ? r.business + ' · Booking calendar' : 'Booking calendar';
         var times = (r.types || {})[r.resort] || defaultTimes();
-        pcModel = buildCalModel(r.list || [], {y:year, m:month, resort:r.resort, types:times}); pcModel.types = times;
+        pcModel = buildCalModel(r.list || [], {y:year, m:month, resort:r.resort, types:times, shades:r.shades || null}); pcModel.types = times;
         $('pcGrid').innerHTML = calendarHtml(pcModel);
-        $('pcKey').innerHTML = TYPE_KEYS.concat(['custom']).map(function(k){ return '<span class="key"><i style="background:' + TYPE_COLORS[k] + '"></i>' + TYPE_LABELS[k] + '</span>'; }).join('');
+        $('pcKey').innerHTML = keyHtml_();
         $('pcLegend').hidden = false;
       } catch (e) {
         pcModel = null;
@@ -4071,6 +4129,7 @@
   }
   function typeChip_(t) { t = TYPE_COLORS[t] ? t : 'custom'; return '<span class="dd-type" style="background:' + TYPE_COLORS[t] + ';color:' + TYPE_TEXT[t] + '">' + esc(TYPE_LABELS[t]) + '</span>'; }
   function openDayDetails(model, ds, signedIn) {
+    if (model && model.shades) applyShades(model.shades);
     var cell = null; (model && model.cells || []).forEach(function(c){ if (c.ds === ds) cell = c; });
     if (!cell) return;
     var d = pdate(ds + ' 00:00'), list = cell.list || [];

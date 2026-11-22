@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=1079dbc4d0">
+<link rel="stylesheet" href="app.css?v=01cfd9e5fb">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -816,6 +816,15 @@
         <div><label>Security deposit text (leave empty to hide)</label><input id="re_deposit" maxlength="120" placeholder="e.g. 1,000 (Refundable upon check-out)"></div>
         <div><label>Heading for the fees list</label><input id="re_excl" maxlength="40" placeholder="Exclusions / Add-ons"></div>
       </div>
+      <div class="row">
+        <div><label for="re_addonMode">Chargeable add-ons on the receipt</label><select id="re_addonMode"><option value="All">All chargeable add-ons (availed checked, others crossed out)</option><option value="Availed">Availed only (just what the guest took)</option></select></div>
+        <div><label for="re_amenTitle">Title of the included amenities box</label><input id="re_amenTitle" maxlength="40" placeholder="INCLUDED AMENITIES"></div>
+      </div>
+      <p class="hint" style="margin:0 0 6px">Add-ons priced at 0 are free amenities: they show in their own green box on the receipt (hidden when there are none).</p>
+      <h2>Calendar colors</h2>
+      <p class="hint" style="margin:0 0 6px">Shading, overlap stripes and the legend on this resort's calendars, including the calendar before the PIN and downloaded calendar images.</p>
+      <div class="shade-grid" id="re_shades"></div>
+      <button class="ghost-btn" id="re_shadeReset" type="button" style="margin:6px 0 4px">Reset all colors to default</button>
       <label>Thank-you line at the bottom</label><input id="re_thanks" maxlength="80">
       <div class="row">
         <div><label>Signature line on the left (Classic style, optional)</label><input id="re_sigL" maxlength="60" placeholder="Client's Signature"></div>
@@ -1041,7 +1050,7 @@
   </div>
 </div>
 
-<script src="app.js?v=e8fcd0a4ea"></script>
+<script src="app.js?v=4d3720ded6"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

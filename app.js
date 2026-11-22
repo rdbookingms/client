@@ -3525,7 +3525,7 @@
     try { if (LKEY) localStorage.setItem('bk_license_key', LKEY); else localStorage.removeItem('bk_license_key'); } catch (e) {}
   }
   var PROVIDER = false;      // true when the provider opened this client's dashboard from the License Admin (no PIN)
-  var LIC = null, licMode = '', licTimer = null;      // licMode: '' | 'key' (typing a different key) | 'reg' (demo sign-up form) | 'new' (replace a lost sheet)
+  var LIC = null, licMode = '', licTimer = null, licReq = 0;      // licReq: answers to older license checks are ignored after switching keys      // licMode: '' | 'key' (typing a different key) | 'reg' (demo sign-up form) | 'new' (replace a lost sheet)
   var LIC_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function licDate(s) { var p = String(s || '').split('-'); return p.length === 3 ? LIC_MON[+p[1] - 1] + ' ' + (+p[2]) + ', ' + p[0] : ''; }
   function licDays(l) {
@@ -3618,9 +3618,10 @@
   function bootLicense(force) {
     licMode = ''; licMsg('');
     $('licScreen').style.display = 'flex'; licGate({reason: 'loading'});
+    var req = ++licReq;
     google.script.run
-      .withSuccessHandler(applyLicense)
-      .withFailureHandler(function(e){ licGate({reason: 'unreachable'}); licMsg(e && e.message ? e.message : String(e)); })
+      .withSuccessHandler(function(l){ if (req === licReq) applyLicense(l); })
+      .withFailureHandler(function(e){ if (req !== licReq) return; licGate({reason: 'unreachable'}); licMsg(e && e.message ? e.message : String(e)); })
       .getLicenseStatus(!!force, LKEY);
   }
   function doActivate() {
@@ -3700,7 +3701,7 @@
           if (res.state && res.state.allowed) pinMsg('Your demo is active and your booking sheet is ready. Enter the PIN you chose.', 'ok');
           return;
         }
-        if (res.code === 'exists') { licMode = ''; licGate(LIC || {reason: 'activate'}); }       // they already have a key: back to the key box
+        if (res.code === 'exists') { licMode = ''; licGate(activateState_()); }       // they already have a key: back to the key box
         if (res.code === 'terms') { SIGNUP = null; loadSignupInfo(); $('regTermsBox').style.display = 'flex'; }
         if (res.code === 'demo_used' || res.code === 'closed') $('licRenew').innerHTML = renewHtml(res.renewal, res.pricing, {hosted: false});
         if (/^promo/.test(res.code || '')) { promoOk = ''; promoMsg(res.message, 'err'); $('regPromoBox').hidden = false; $('regPromo').focus(); }
@@ -3938,15 +3939,31 @@
   ['regPin1', 'regPin2', 'setPin1', 'setPin2'].forEach(function(id){ $(id).addEventListener('input', function(){ onlyDigits(this); }); });
   $('setPin2').addEventListener('keydown', function(e){ if (e.key === 'Enter') doSetup(); });
   $('lnkLicNew').addEventListener('click', function(){ licMode = 'new'; licMsg('A new, empty sheet will be used from now on. The old sheet is not deleted, but the app will no longer read it.'); licGate(LIC || {reason: 'nosheet'}); $('setPin1').focus(); });
-  $('lnkLicDemo').addEventListener('click', function(){ licMode = 'reg'; licMsg(''); $('licRenew').innerHTML = ''; licGate(LIC || {reason: 'activate'}); loadSignupInfo(); $('regName').focus(); });
-  $('lnkLicHaveKey').addEventListener('click', function(){ licMode = ''; licMsg(''); $('licRenew').innerHTML = ''; licGate(LIC || {reason: 'activate'}); $('licKey').focus(); });
+  // The key / demo screens always open as the activation step. LIC can still hold an "active" answer of the business this
+  // device was using (after "Use a different license key"), which the lock screen has no screen for ("This app is locked").
+  function activateState_() {
+    if (LIC && LIC.reason === 'activate') return LIC;
+    return { reason: 'activate', hosted: !(LIC && LIC.hosted === false), signedInAs: LIC && LIC.signedInAs || '', appUrl: LIC && LIC.appUrl || '' };
+  }
+  // Leaving the current business to enter another key or start a demo: drop the remembered license answer and stop the
+  // background checks (expiry timer, a check still on its way) so they cannot reopen the previous business on top of
+  // the form. The saved key itself stays until a new key is activated or a demo is registered, so a reload still
+  // opens the current business if the switch is abandoned.
+  function resetLicenseState_() {
+    clearTimeout(licTimer); licTimer = null; licReq++;
+    LIC = null; licMsg(''); $('licRenew').innerHTML = '';
+  }
+  $('lnkLicDemo').addEventListener('click', function(){ licMode = 'reg'; licMsg(''); $('licRenew').innerHTML = ''; licGate(activateState_()); loadSignupInfo(); $('regName').focus(); });
+  $('lnkLicHaveKey').addEventListener('click', function(){ licMode = ''; licMsg(''); $('licRenew').innerHTML = ''; licGate(activateState_()); $('licKey').focus(); });
   $('btnLicRetry').addEventListener('click', function(){ bootLicense(true); });
   $('lnkLicKey').addEventListener('click', function(){ licMode = 'key'; licMsg(''); $('licKeyBox').style.display = ''; this.style.display = 'none'; $('licKey').focus(); });
   // hosted app: a device used for another business can switch to that business's license key
   $('lnkPinKey').addEventListener('click', function(){
-    lockApp(''); $('pinScreen').style.display = 'none'; $('licScreen').style.display = 'flex';
-    licMode = 'key'; licMsg('Enter the other license key. The key of this business stays valid - you can enter it again any time.');
-    licGate({reason: 'activate', hosted: true}); $('licKey').focus();
+    lockApp(''); resetLicenseState_(); $('pinScreen').style.display = 'none'; $('licScreen').style.display = 'flex';
+    licMode = 'key';
+    licGate({reason: 'activate', hosted: true});
+    licMsg('Enter the other license key. The key of this business stays valid - you can enter it again any time.');
+    $('licKey').focus();
   });
   $('btnSub').addEventListener('click', function(){ $('subBg').style.display = 'flex'; });
   $('btnSubX').addEventListener('click', function(){ $('subBg').style.display = 'none'; });

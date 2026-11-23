@@ -157,7 +157,59 @@ sw = sw.replace(/^const BUILD = .*$/m, "const BUILD = '" + build + "';")
        .replace(/^const ASSETS = .*$/m, 'const ASSETS = ' + JSON.stringify(assets) + ';');
 fs.writeFileSync(swPath, sw, 'utf8');
 
+// ---- 5. License Admin pages: /partners/ (referral partners) and /admin/ (Admin panel)
+const laCandidates = [path.join(webDir, '..', 'License Admin'), path.join(webDir, '..', '..', 'License Admin')];
+const laDir = laCandidates.find(d => fs.existsSync(path.join(d, 'Referrer.html')) && fs.existsSync(path.join(d, 'Admin.html')));
+const built = [];
+if (!laDir) console.warn('Note: "License Admin/Referrer.html" and "Admin.html" were not found - /partners/ and /admin/ were not rebuilt.');
+else {
+  const gateV = hash(fs.readFileSync(path.join(webDir, 'admin', 'google-gate.js'), 'utf8'));
+  const page = (file, dir, extraHead, ownIcon) => {
+    let h = fs.readFileSync(path.join(laDir, file), 'utf8').replace(/\r\n/g, '\n');
+    if (h.includes('gas-bridge.js')) fail(file + ' already contains gas-bridge.js - use the original Apps Script file.');
+    h = h.replace(/<meta charset="utf-8">\n?/i, '');
+    h = h.replace(/<head>\s*/i, m => m + '<meta charset="utf-8">\n' +
+      '<script src="../license-config.js"></script>\n' + extraHead.join('\n') + '\n' +
+      '<script src="../gas-bridge.js?v=' + bridgeV + '"></script>\n' +
+      '<link rel="preconnect" href="https://script.google.com" crossorigin>\n' +
+      '<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>\n' +
+      '<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32.png">\n' +
+      '<link rel="apple-touch-icon" href="' + (ownIcon ? '' : '../') + 'apple-touch-icon.png">\n' +
+      '<meta name="theme-color" content="#0f9aa8">\n');
+    fs.mkdirSync(path.join(webDir, dir), { recursive: true });
+    fs.writeFileSync(path.join(webDir, dir, 'index.html'), h, 'utf8');
+    built.push(dir + '/index.html');
+  };
+  const partnerUrl = new URL('partners/', SITE.url).href;
+  const partnerText = 'Invite resort owners to ' + SITE.title + ' and earn a monthly share of their subscription.';
+  page('Referrer.html', 'partners', [
+    '<meta name="description" content="' + attr(partnerText) + '">',
+    '<meta property="og:type" content="website">',
+    '<meta property="og:site_name" content="' + attr(SITE.title) + '">',
+    '<meta property="og:title" content="' + attr(SITE.title + ' - Referral partners') + '">',
+    '<meta property="og:description" content="' + attr(partnerText) + '">',
+    '<meta property="og:url" content="' + attr(partnerUrl) + '">',
+    '<meta property="og:image" content="' + attr(imageUrl) + '">',
+    '<meta property="og:image:width" content="1200">',
+    '<meta property="og:image:height" content="630">',
+    '<meta name="twitter:card" content="summary_large_image">'
+  ]);
+  // The Admin panel can be installed as its own app (admin/manifest.webmanifest, admin/sw.js, admin/install.js, admin/icon-*.png)
+  const instV = hash(fs.readFileSync(path.join(webDir, 'admin', 'install.js'), 'utf8'));
+  page('Admin.html', 'admin', [
+    '<meta name="robots" content="noindex, nofollow">',
+    '<link rel="manifest" href="manifest.webmanifest">',
+    '<meta name="apple-mobile-web-app-capable" content="yes">',
+    '<meta name="mobile-web-app-capable" content="yes">',
+    '<meta name="apple-mobile-web-app-title" content="RD Admin">',
+    '<meta name="apple-mobile-web-app-status-bar-style" content="default">',
+    '<script src="google-gate.js?v=' + gateV + '"></script>',
+    '<script src="install.js?v=' + instV + '" defer></script>'
+  ], true);
+}
+
 const kb = n => (Buffer.byteLength(n) / 1024).toFixed(0) + ' KB';
 console.log('Built from ' + source);
 console.log('  index.html ' + kb(html) + '   app.css ' + kb(css) + '   app.js ' + kb(js) + '   (build ' + build + ')');
-console.log('Upload to GitHub: index.html, app.css, app.js, sw.js' );
+if (laDir) console.log('Built ' + built.join(' and ') + ' from ' + laDir);
+console.log('Upload to GitHub: index.html, app.css, app.js, sw.js' + (built.length ? ', partners/index.html, admin/index.html (and the admin/ app files: manifest.webmanifest, sw.js, install.js, icon-192.png, icon-512.png, icon-maskable-512.png, apple-touch-icon.png)' : ''));

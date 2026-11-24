@@ -1317,9 +1317,41 @@
    *   Overnight           -> PM triangle of its check-in date
    *   22 Hours (Morning)  -> both triangles of its check-in date
    *   22 Hours (Evening)  -> PM of the check-in date + AM of the check-out date
-   *   Custom              -> only its exact hours, on every date it touches (diagonal bands)
+   *   Custom              -> every slot its hours overlap, using this resort's Day Tour and Overnight times:
+   *                          Day Tour window of a date -> AM triangle, Overnight window starting that date -> PM triangle.
+   *                          Hours in neither window shade the half they fall in (never the date before check-in).
    * A triangle shared by two bookings is striped in both colours.
    * Labels: G# with the times underneath, in the triangle where the booking shows. */
+  /* Custom Time bookings: which triangles they shade and where their labels go (see the rules above). */
+  function customSlots_(b, D, resort, times, put, lab, monthEnd) {
+    function over(w) { return b.s < w[1] && b.e > w[0]; }
+    function startsIn(w) { return b.s >= w[0] && b.s < w[1]; }
+    function endsIn(w) { return b.e > w[0] && b.e <= w[1]; }
+    var lastDs = (function(){ var t = new Date(b.e.getTime() - 60000); return dstr(t.getFullYear(), t.getMonth(), t.getDate()); })();
+    if (lastDs < D) lastDs = D;
+    var halves = {}, laterShaded = false;
+    for (var ds = D; ds <= lastDs; ds = addDays(ds, 1)) {
+      var U = over(slotWin(ds, 'U', resort, times)), L = over(slotWin(ds, 'L', resort, times));
+      if (!U && !L) {
+        var h = dayHours_(b, ds);
+        var prevNight = ds > D && over(slotWin(addDays(ds, -1), 'L', resort, times));      // after midnight: part of the night before
+        if (h && !prevNight) { if (h[0] < 12) U = true; else L = true; }
+      }
+      halves[ds] = {U:U, L:L};
+      if (ds > D && (U || L)) laterShaded = true;
+      if (ds <= monthEnd) { if (U) put(ds, 'U', b); if (L) put(ds, 'L', b); }
+      if (ds > monthEnd && ds > D) break;
+    }
+    var dW = slotWin(D, 'U', resort, times), nW = slotWin(D, 'L', resort, times);
+    var hIn = startsIn(dW) ? 'U' : startsIn(nW) ? 'L' : (b.s.getHours() < 12 ? 'U' : 'L');
+    if (lastDs === D) { lab(D, hIn, b, 'IN: ' + fmtC(b.s), false, 'OUT: ' + fmtC(b.e)); return; }
+    if (!laterShaded) { lab(D, hIn, b, fmtC(b.s) + ' – ' + fmtC(b.e), true); return; }      // like Overnight: one label, "(next day)"
+    lab(D, hIn, b, 'IN: ' + fmtC(b.s));
+    for (var md = addDays(D, 1); md < lastDs && md <= monthEnd; md = addDays(md, 1)) lab(md, 'U', b, 'All day');
+    var oh = halves[lastDs] || {}, hOut = endsIn(slotWin(lastDs, 'U', resort, times)) ? 'U' : endsIn(slotWin(lastDs, 'L', resort, times)) ? 'L'
+      : oh.U ? 'U' : oh.L ? 'L' : (b.e.getHours() < 12 ? 'U' : 'L');
+    lab(lastDs, hOut, b, 'OUT: ' + fmtC(b.e));
+  }
   function nextDay_(b) { var d = new Date(b.s.getFullYear(), b.s.getMonth(), b.s.getDate() + 1); return b.e >= d; }
   function buildCalModel(list, context) {
     context = context || { y:calY, m:calM, resort:$('calResort').value };
@@ -1331,7 +1363,7 @@
     });
     bks.sort(function(a, b){ return (a.s - b.s) || (a.id - b.id); });
     var days = new Date(y, m + 1, 0).getDate(), byDs = {}, cells = [], gn = 0;
-    for (var d = 1; d <= days; d++) { var k = dstr(y, m, d); byDs[k] = {d:d, ds:k, U:[], L:[], bands:[], lab:{U:[], L:[], C:[]}, list:[]}; }
+    for (var d = 1; d <= days; d++) { var k = dstr(y, m, d); byDs[k] = {d:d, ds:k, U:[], L:[], lab:{U:[], L:[], C:[]}, list:[]}; }
     function put(ds, h, b) { if (byDs[ds]) byDs[ds][h].push(b.type); }
     function lab(ds, h, b, t, nd, t2) { if (byDs[ds]) byDs[ds].lab[h].push({guest:b.guest, type:b.type, t:t, t2:t2 || '', nd:!!nd}); }
     bks.forEach(function(b){              // guest numbers follow check-in order for the bookings shown this month
@@ -1343,25 +1375,12 @@
       else if (b.type === 'overnight') { put(D, 'L', b); lab(D, 'L', b, range, nextDay_(b)); }
       else if (b.type === 'morning22') { put(D, 'U', b); put(D, 'L', b); lab(D, 'C', b, range, nextDay_(b)); }
       else if (b.type === 'evening22') { put(D, 'L', b); lab(D, 'L', b, 'IN: ' + fmtC(b.s)); put(N, 'U', b); lab(N, 'U', b, 'OUT: ' + fmtC(b.e)); }
-      else {
-        for (var ds = D; ds <= dstr(y, m, days) && pdate(ds + ' 00:00') < b.e; ds = addDays(ds, 1)) {
-          var h = dayHours_(b, ds); if (!h || !byDs[ds]) continue;
-          byDs[ds].bands.push({a:h[0], z:h[1], type:b.type, color:TYPE_COLORS[b.type]});
-          // like 22 Hours (Evening): IN on the check-in date, OUT on the check-out date, 'All day' in between
-          var isIn = ds === D, isOut = h[1] < 24 || addDays(ds, 1) + ' 00:00' === b.checkOut.slice(0, 16);
-          lab(ds, h[0] < 12 ? 'U' : 'L', b, isIn ? 'IN: ' + fmtC(b.s) : (isOut ? 'OUT: ' + fmtC(b.e) : 'All day'), false, isIn && isOut ? 'OUT: ' + fmtC(b.e) : '');
-        }
-      }
+      else customSlots_(b, D, resort, times, put, lab, dstr(y, m, days));
     });
     Object.keys(byDs).forEach(function(k){
       var c = byDs[k];
       bks.forEach(function(b){ var h = dayHours_(b, k); if (h) c.list.push({guest:b.guest, type:b.type, checkIn:b.checkIn, checkOut:b.checkOut, a:h[0], z:h[1]}); });
-      // a custom band entering a filled triangle stripes it
-      c.bands.forEach(function(bd){
-        if (c.U.length && bd.a < 12 && c.U.indexOf(bd.type) < 0) c.U.push(bd.type);
-        if (c.L.length && bd.z > 12 && c.L.indexOf(bd.type) < 0) c.L.push(bd.type);
-      });
-      var first = c.U.length === 1 ? c.U[0] : (c.bands.some(function(bd){ return bd.a < 1; }) ? 'custom' : null);
+      var first = c.U.length === 1 ? c.U[0] : null;
       c.numTxt = first ? TYPE_TEXT[first] : '#17333a'; c.numHalo = first ? haloOf_(first) : '#ffffff';
       if (c.U.length > 1) { c.numTxt = '#102a30'; c.numHalo = '#ffffff'; }
       cells.push(c);
@@ -1369,6 +1388,8 @@
     cells.sort(function(a, b){ return a.d - b.d; });
     return {y:y, m:m, firstDow:new Date(y, m, 1).getDay(), days:days, cells:cells, resort:resort, shades:shades};
   }
+  // "(next day)" as one tall pair of parentheses around "next" stacked over "day" (saves width in the date box)
+  var ND_HTML = '<span class="nd2" aria-label="(next day)"><span class="p">(</span><span class="w"><span>next</span><span>day</span></span><span class="p">)</span></span>';
   function haloOf_(type) { return type === 'custom' ? (TYPE_COLORS.custom === SHADE_DEFAULT.custom ? '#f1e8fc' : mixHex(TYPE_COLORS.custom, .82)) : TYPE_COLORS[type]; }   // custom labels often sit half on the band, half on white
   // labels on a striped (shared) triangle use dark text with a white outline so they stay readable over both colours
   function labCol_(x, striped) { return striped ? {c:'#102a30', h:'#ffffff'} : {c:TYPE_TEXT[x.type], h:haloOf_(x.type)}; }
@@ -1389,14 +1410,12 @@
     model.cells.forEach(function(c){
       var isToday = (now.getFullYear() === model.y && now.getMonth() === model.m && now.getDate() === c.d);
       var label = MONTHS[model.m] + ' ' + c.d + ', ' + model.y + ': ' + (c.list && c.list.length ? c.list.map(function(x){ return 'Guest ' + (x.guest || '?') + ' ' + hrTxt_(x.a) + ' to ' + hrTxt_(x.z); }).join('; ') : 'open all day');
-      var svg = c.bands && c.bands.length ? '<svg class="cal-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' + c.bands.map(function(bd){
-          return '<polygon points="' + bandPoly_(bd.a, bd.z, 100, 100).map(function(q){ return q[0].toFixed(2) + ',' + q[1].toFixed(2); }).join(' ') + '" fill="' + bd.color + '"/>';
-        }).join('') + '</svg>' : '';
+      var svg = '';
       function labs(items, cls, striped) {
         if (!items.length) return '';
         return '<span class="ct ' + cls + '">' + items.map(function(x){
           var k = labCol_(x, striped), h = k.h, sh = '0 0 2px ' + h + ',0 0 2px ' + h + ',0 0 1px ' + h;
-          return '<span class="lb" style="color:' + k.c + ';text-shadow:' + sh + '"><b>G' + (x.guest || '?') + '</b>' + esc(x.t) + (x.nd ? ' <span class="nd">(next day)</span>' : '') + (x.t2 ? '<br>' + esc(x.t2) : '') + '</span>';
+          return '<span class="lb" style="color:' + k.c + ';text-shadow:' + sh + '"><b>G' + (x.guest || '?') + '</b>' + (x.nd ? '<span class="tr">' + esc(x.t) + ' ' + ND_HTML + '</span>' : esc(x.t)) + (x.t2 ? '<br>' + esc(x.t2) : '') + '</span>';
         }).join('') + '</span>';
       }
       var fU = fillCss_(c.U), fL = fillCss_(c.L), nh = c.numHalo;
@@ -1465,11 +1484,6 @@
       paint(x, y, cw, ch, 'U', null, '#f6fafb'); paint(x, y, cw, ch, 'L', null, '#eceff3');
       var fills = {U: c.U && c.U.length ? {c1:TYPE_COLORS[c.U[0]], c2:c.U[1] ? TYPE_COLORS[c.U[1]] : null} : null,
                    L: c.L && c.L.length ? {c1:TYPE_COLORS[c.L[0]], c2:c.L[1] ? TYPE_COLORS[c.L[1]] : null} : null};
-      (c.bands || []).forEach(function(bd){
-        var pts = bandPoly_(bd.a, bd.z, cw, ch); if (pts.length < 3) return;
-        g.beginPath(); pts.forEach(function(q, k){ if (k) g.lineTo(x + q[0], y + q[1]); else g.moveTo(x + q[0], y + q[1]); }); g.closePath();
-        g.fillStyle = bd.color; g.fill();
-      });
       if (fills.U) paint(x, y, cw, ch, 'U', fills.U); if (fills.L) paint(x, y, cw, ch, 'L', fills.L);
       g.strokeStyle = '#7d8d92'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y + ch); g.lineTo(x + cw, y); g.stroke();
       g.strokeStyle = '#b9c6c9'; g.strokeRect(x + .5, y + .5, cw - 1, ch - 1);
@@ -1477,11 +1491,31 @@
         g.font = font; g.textAlign = align; g.lineJoin = 'round'; g.lineWidth = 3; g.strokeStyle = halo; g.strokeText(t, tx, ty); g.fillStyle = color; g.fillText(t, tx, ty);
       }
       txt(String(c.d), x + 7, y + 20, 'left', '800 15px ' + F, c.numTxt, c.numHalo);
+      function ndLine(l, tx, ty, align) {        // "7p – 5a" + one tall pair of parentheses around "next" over "day"
+        var k = l[2], fw = '600 10px ' + F, fp = '600 12px ' + F;
+        g.font = l[1]; var wT = g.measureText(l[0] + ' ').width;
+        g.font = fw; var wW = Math.max(g.measureText('next').width, g.measureText('day').width) + 2;
+        g.font = fp; var wP = g.measureText('(').width, tot = wT + wP * 2 + wW;
+        var x0 = align === 'right' ? tx - tot : align === 'center' ? tx - tot / 2 : tx, cy = ty - 4;
+        txt(l[0], x0, ty, 'left', l[1], k.c, k.h);
+        g.save(); g.textBaseline = 'middle';
+        txt('next', x0 + wT + wP + wW / 2, cy - 5.5, 'center', fw, k.c, k.h);
+        txt('day', x0 + wT + wP + wW / 2, cy + 5.5, 'center', fw, k.c, k.h);
+        [[x0 + wT, '('], [x0 + wT + wP + wW, ')']].forEach(function(pp){
+          g.save(); g.translate(pp[0], cy); g.scale(1, 2.05); g.font = fp; g.textAlign = 'left'; g.lineJoin = 'round'; g.lineWidth = 1.6;
+          g.strokeStyle = k.h; g.strokeText(pp[1], 0, 0); g.fillStyle = k.c; g.fillText(pp[1], 0, 0); g.restore();      // thinner outline: it is stretched too
+        });
+        g.restore();
+      }
       function block(items, tx, ty, align, up, striped) {
         var lines = [];
-        items.forEach(function(it){ var k = labCol_(it, striped); lines.push(['G' + (it.guest || '?'), '800 13px ' + F, k]); lines.push([it.t + (it.nd ? ' (next day)' : ''), '600 12px ' + F, k]); if (it.t2) lines.push([it.t2, '600 12px ' + F, k]); });
+        items.forEach(function(it){ var k = labCol_(it, striped); lines.push(['G' + (it.guest || '?'), '800 13px ' + F, k]); lines.push([it.t, '600 12px ' + F, k, it.nd]); if (it.t2) lines.push([it.t2, '600 12px ' + F, k]); });
         if (up) lines.reverse();
-        lines.forEach(function(l, k){ txt(l[0], tx, ty + (up ? -k : k) * 16, align, l[1], l[2].c, l[2].h); });
+        var yy = ty - (up && lines[0] && lines[0][3] ? 5 : 0);      // a stacked note on the bottom line stays inside the box
+        lines.forEach(function(l, k){
+          if (k) yy += (up ? -1 : 1) * (16 + (lines[k - 1][3] ? 4 : 0) + (l[3] ? 4 : 0));      // the stacked note is taller than a line
+          if (l[3]) ndLine(l, tx, yy, align); else txt(l[0], tx, yy, align, l[1], l[2].c, l[2].h);
+        });
       }
       if (c.lab) {
         block(c.lab.C, x + cw / 2, y + ch / 2 - 4, 'center', false, c.U.length > 1);
@@ -1500,7 +1534,7 @@
     });
     g.font = '500 12.5px ' + F; g.fillStyle = '#5b6f75';
     g.fillText('Upper-left = AM, lower-right = PM. Day Tour fills AM; Overnight fills PM; 22 Hours (Morning) fills the whole date;', pad, ly + 30);
-    g.fillText('22 Hours (Evening) fills PM on check-in and AM on check-out. Custom shades only its booked hours. Stripes = two bookings share a half.', pad, ly + 50);
+    g.fillText('22 Hours (Evening) fills PM on check-in and AM on check-out. Custom fills each Day Tour / Overnight slot it overlaps. Stripes = two bookings share a half.', pad, ly + 50);
     g.fillText('Labels: G# = guest number (check-in order this month) with its times; 22 Hours (Evening) and Custom show IN on check-in and OUT on check-out.', pad, ly + 70);
     var a = document.createElement('a');
     a.download = 'Calendar_' + M.resort.replace(/[^a-z0-9]+/gi, '-') + '_' + M.y + '-' + pad2(M.m + 1) + '.png';

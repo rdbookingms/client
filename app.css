@@ -132,7 +132,12 @@
   .cal-cell .ct .lb { display:block; margin-bottom:1px; }
   .cal-cell .ct.ccenter { background:none; padding:0; text-align:center; }
   .tri-fill { z-index:0; }
-  .cal-cell .ct .nd { display:block; }
+  .cal-cell .ct .tr { display:inline-flex; align-items:center; gap:2px; }
+  .cal-cell .ct .nd2 { display:inline-flex; align-items:center; }
+  .cal-cell .ct .nd2 .p { display:inline-block; transform:scaleY(2.05); line-height:1; font-weight:600; }
+  .cal-cell .ct .nd2 .w { display:inline-flex; flex-direction:column; text-align:center; line-height:1.05; padding:0 1px; }
+  /* narrow phones: no room beside the times, so the note sits under them (still one tall pair of parentheses) */
+  @media (max-width:430px){ .cal-cell .ct .tr { flex-direction:column; align-items:flex-end; gap:0; } .cal-cell .ct.cday .tr { align-items:flex-start; } .cal-cell .ct.ccenter .tr { align-items:center; } }
   .modal.day { max-width:560px; }
   .dd-sub { padding:0 18px; color:var(--muted); font-size:13px; }
   .dd-bar { position:relative; height:26px; margin:10px 18px 2px; background:#eef3f4; border:1px solid #d5e1e3; border-radius:6px; overflow:hidden; }

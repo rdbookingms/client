@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=0a9d2e172f">
+<link rel="stylesheet" href="app.css?v=9b234415a5">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -205,7 +205,7 @@
     <div class="pc-tools"><select id="pcResort" aria-label="Resort"></select><button id="pcPrev" type="button" aria-label="Previous month">‹</button><strong id="pcMonth"></strong><button id="pcNext" type="button" aria-label="Next month">›</button><button id="pcToday" type="button">Today</button><button id="pcRefresh" type="button">Refresh</button><button id="pcDownload" type="button" disabled>Download image</button></div>
     <div id="pcStatus" role="status" aria-live="polite">Loading calendar…</div>
     <div id="pcGrid" class="cal-grid"></div>
-    <div class="cal-legend" id="pcLegend" hidden><div id="pcKey"></div>Each date is split in two: <b>upper-left = AM</b>, <b>lower-right = PM</b>. Custom bookings shade only their booked hours; stripes mean two bookings share a half. G# numbers identify bookings without revealing names. Tap a date to see its booked times.</div>
+    <div class="cal-legend" id="pcLegend" hidden><div id="pcKey"></div>Each date is split in two: <b>upper-left = AM</b>, <b>lower-right = PM</b>. Custom bookings shade the Day Tour (AM) or Overnight (PM) slot their hours overlap; stripes mean two bookings share a half. G# numbers identify bookings without revealing names. Tap a date to see its booked times.</div>
   </section>
   <div class="pin-card">
     <div class="pin-lock">&#128274;</div>
@@ -608,7 +608,7 @@
     <div class="cal-legend">
       <div id="calKey"></div>
       Each date box is split in two: <b>upper-left = AM</b>, <b>lower-right = PM</b>. Day Tour fills AM, Overnight fills PM, 22 Hours (Morning) fills the whole date,
-      and 22 Hours (Evening) fills PM on check-in and AM on check-out. Custom shades only its booked hours. Stripes mean two bookings share a half.
+      and 22 Hours (Evening) fills PM on check-in and AM on check-out. Custom fills each Day Tour (AM) or Overnight (PM) slot its hours overlap. Stripes mean two bookings share a half.
       G# = guest number in check-in order for the month. <b>Tap a date</b> to see its bookings.
     </div>
   </div>
@@ -1065,7 +1065,7 @@
   </div>
 </div>
 
-<script src="app.js?v=6256cbac92"></script>
+<script src="app.js?v=4740b4c3c1"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

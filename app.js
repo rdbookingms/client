@@ -117,7 +117,7 @@
     var terms = linesOf(cfg.terms), notes = linesOf(cfg.notes);
     return '' +
     (bg ? '<div class="r-bg" style="background-image:url(' + bg + ')"></div>' : '') +
-    '<div class="r-head" style="background:linear-gradient(100deg,' + c1 + ' 0%,' + midHex(c1, c2) + ' 55%,' + c2 + ' 100%)"><div class="r-logo">' + logoHTML(cfg) + '</div><div class="r-title">' + esc(cfg.title || 'BOOKING CONFIRMATION') + '</div></div>' +
+    '<div class="r-head" style="background:linear-gradient(100deg,' + c1 + ' 0%,' + midHex(c1, c2) + ' 55%,' + c2 + ' 100%)"><div class="r-logo">' + logoHTML(cfg) + '</div><div class="r-title">' + esc(cfg.title || 'RESERVATION CONFIRMATION') + '</div></div>' +
     '<div class="r-body">' +
       '<div class="r-contact"><div><div class="lbl" style="color:' + accent + '">Contact &amp; Address</div>' + contactL + '</div>' +
       '<div style="text-align:right;padding-top:18px">' + contactR + '</div></div>' +
@@ -134,7 +134,7 @@
       '</div>' +
     '<div class="r-foot" style="background:linear-gradient(110deg,' + tintA(c1, .8, .86) + ' 0%,' + tintA(midHex(c1, c2), .8, .86) + ' 50%,' + tintA(c2, .8, .86) + ' 100%)"><div class="r-foot-grid">' +
       '<div class="r-foot-side">' + (cfg.deposit ? '<div class="deposit"><div class="t">SECURITY DEPOSIT</div><div class="a">' + esc(cfg.deposit) + '</div></div>' : '') +
-      '<div class="yb excl-box"><h4>' + esc(cfg.exclHeading || 'Exclusions / Add-ons') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' + amenBox(cfg) + '</div>' +
+      '<div class="yb excl-box"><h4>' + esc(cfg.exclHeading || 'OPTIONAL ADD-ONS') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' + amenBox(cfg) + '</div>' +
       '<div class="r-foot-terms">' + (terms.length ? '<h4>' + esc(cfg.termsHeading || 'Terms and Conditions') + '</h4><ul' + listAttr(cfg, 'terms') + '>' + lis(terms) + '</ul>' : '') + '</div></div>' +
       (cfg.thanks ? '<div class="thanks">' + esc(cfg.thanks) + '</div>' : '') +
       (notes.length ? '<div class="notes yb"><b>Note:</b><ul' + listAttr(cfg, 'notes') + '>' + lis(notes) + '</ul></div>' : '') +
@@ -155,7 +155,7 @@
       '<div class="rp-headtext"><div class="rp-name">' + esc(cfg.headerName || cfg.name) + '</div>' +
       (cfg.address ? '<div class="rp-addr">' + esc(cfg.address) + '</div>' : '') + '</div></div>' +
     '<div class="rp-contact" style="background:' + mixHex(c1, .86) + ';color:' + c1 + '"><span>' + esc(cfg.web) + '</span><span>' + esc(contactR) + '</span></div>' +
-    '<div class="rp-title"><span class="rp-t">' + esc(cfg.title || 'Reservation Receipt') + '</span><span class="rp-date">Date: <b id="p_bookingDate"></b></span></div>' +
+    '<div class="rp-title"><span class="rp-t">' + esc(cfg.title || 'RESERVATION CONFIRMATION') + '</span><span class="rp-date">Date: <b id="p_bookingDate"></b></span></div>' +
     '<div class="rp-body"><table class="bd booking-details rp-details"></table>' +
       (cfg.sigLeft || cfg.sigRight ? '<div class="rp-cols"><div>' + (cfg.sigLeft ? '<div class="sig"><span class="line"></span>' + esc(cfg.sigLeft) + '</div>' : '') + '</div><div>' + (cfg.sigRight ? '<div class="sig"><span class="line"></span>' + esc(cfg.sigRight) + '</div>' : '') + '</div></div>' : '') +
     '</div>' +
@@ -163,7 +163,7 @@
     '<div class="rp-bottom">' +
       '<div>' + (notes.length ? '<div class="rp-note yb"><b>Note:</b><ul' + listAttr(cfg, 'notes') + '>' + lis(notes) + '</ul></div>' : '') +
         (cfg.deposit ? '<div class="rp-note" style="margin-top:10px;background:#fdecea"><b>Security deposit:</b> ' + esc(cfg.deposit) + '</div>' : '') + '</div>' +
-      '<div class="rp-side"><div class="rp-excl yb"><h4>' + esc(cfg.exclHeading || 'Exclusions') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' + amenBox(cfg) + '</div>' +
+      '<div class="rp-side"><div class="rp-excl yb"><h4>' + esc(cfg.exclHeading || 'OPTIONAL ADD-ONS') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' + amenBox(cfg) + '</div>' +
     '</div>' +
     '<div class="rp-thanks" style="background:' + mixHex(c1, .86) + '"><span>' + esc(cfg.thanks || '') + '</span><span class="rp-serial" id="p_invoiceNo"></span></div>';
   }
@@ -248,7 +248,7 @@
     layoutBookingDetails(root);
   }
   /* Always a complete box, no empty cells:
-   *  1. hidden fields (switched off, or empty custom fields with auto-hide) are taken out first;
+   *  1. hidden fields (switched off, empty custom fields with auto-hide, Agent when not referred) are taken out first;
    *  2. the visible fields keep the saved order (Admin Settings > resort > Booking details table order) and fill
    *     the rows two at a time, left then right, so the fields after a hidden one move up into its place;
    *  3. when the visible count is odd, the last field spans the whole row (colspan). */
@@ -259,6 +259,7 @@
     root._detailOrder.forEach(function(key){
       var c = cells[key];
       var show = c.custom ? options[key].visible && !(options.autoHideEmpty && !c.v.textContent.trim()) : root._detailHide.indexOf(key) < 0;
+      if (key === 'marketer' && root._agentOff) show = false;      // "Referred by Agent: No" (or no agent saved): no Agent row
       if (!show) { hidden.push(key); return; }
       if (!pending) { pending = key; return; }
       rows.push({col1:pending, col2:key}); pending = null;
@@ -291,6 +292,7 @@
     table.hidden = !rows.length;
   }
   function applyCustomReceiptVisibility(root) { layoutBookingDetails(root); }
+  function setAgentRow_(root, off) { off = !!off; if (root._agentOff === off) return; root._agentOff = off; layoutBookingDetails(root); }
   function applyCustomFormVisibility() {
     var options = customFieldConfig(RC());
     CUSTOM_FIELD_KEYS.forEach(function(key){ $('lbl_' + key).textContent = options[key].label; $(key).closest('[data-custom-form]').hidden = !options[key].visible; });
@@ -802,6 +804,7 @@
       mode: $('mode').value, checkIn: $('checkIn').value, checkOut: $('checkOut').value, bookType: $('bookType').value, resort: $('resort').value,
       pax: $('pax').value, marketer: agentNameVal(), roomsIncluded:$('roomsIncluded').value,extraField1:$('extraField1').value,extraField2:$('extraField2').value,extraField3:$('extraField3').value
     }));
+    setAgentRow_(root, referredVal() !== 'Yes');
     var rrows = rows.concat(freeRowsFor($('resort').value).filter(function(f){ return !rows.some(function(r){ return r.name === f.name; }); }));
     renderReceiptFees(root, rrows);
     setFeeCell(root, rrows, frozen && ft ? peso(ft) + (frozen.additionalFees ? ' - ' + frozen.additionalFees : '') : '');
@@ -1078,6 +1081,7 @@
   /* ---------- regenerate a saved booking's receipt (does not touch the form) ---------- */
   function fillReceipt(root, d) {
     fillMap(root, receiptMap(d));
+    setAgentRow_(root, !String(d.marketer || '').trim());
     var frows = buildFeeRows(feesFor(d.resort), parseDetail(d.feesDetail));
     renderReceiptFees(root, frows);
     setFeeCell(root, frows, d.feesDetail ? '' : addFeeText(String(d.additionalFees || '')));
@@ -2538,8 +2542,8 @@
   }
   function openResortEditor(name) {
     var r = name ? RESORTS[name] : null;
-    var d = r || {name:'', active:true, style:'Modern', headerName:'', title:'BOOKING CONFIRMATION', contactPerson:'', phone:'', address:'', web:'', c1:'#0b93a6', c2:'#7ad45c',
-                  terms:'', notes:'', deposit:'', exclHeading:'Exclusions / Add-ons', thanks:'THANK YOU FOR BOOKING WITH US', termsHeading:'Terms and Conditions', sigLeft:'', sigRight:'',
+    var d = r || {name:'', active:true, style:'Modern', headerName:'', title:'RESERVATION CONFIRMATION', contactPerson:'', phone:'', address:'', web:'', c1:'#0b93a6', c2:'#7ad45c',
+                  terms:'', notes:'', deposit:'', exclHeading:'OPTIONAL ADD-ONS', thanks:'THANK YOU FOR BOOKING WITH US', termsHeading:'Terms and Conditions', sigLeft:'', sigRight:'',
                   labels:{invoiceNo:'Invoice No.', bookingFee:'Booking Fee', downPayment:'Down Payment', pax:'# of Pax', marketer:'Agent', checkIn:'Check-In', checkOut:'Check-Out'}, logo:'', bg:'',
                   ownership:'Owned', rentTotal:0, rentTermValue:0, rentTermUnit:'Months', rentStart:''};
     resEd = {orig: name || '', logo: {pending: null, remove: false, cur: r ? (r.logo || BUILTIN_LOGOS[r.name] || '') : ''}, bg: {pending: null, remove: false, cur: r ? (r.bg || BUILTIN_BG[r.name] || '') : ''}};
@@ -2662,7 +2666,7 @@
       c1: $('re_c1').value, c2: $('re_c2').value, terms: $('re_terms').value, notes: $('re_notes').value, deposit: $('re_deposit').value.trim(),
       bullets: {terms:{on:$('re_tbOn').checked, style:$('re_tbStyle').value}, notes:{on:$('re_nbOn').checked, style:$('re_nbStyle').value}},
       addonMode: $('re_addonMode').value, amenTitle: $('re_amenTitle').value.trim(), shades: shadeEditorValue(),
-      exclHeading: $('re_excl').value.trim() || 'Exclusions / Add-ons', thanks: $('re_thanks').value.trim(), termsHeading: $('re_termsHead').value.trim() || 'Terms and Conditions',
+      exclHeading: $('re_excl').value.trim() || 'OPTIONAL ADD-ONS', thanks: $('re_thanks').value.trim(), termsHeading: $('re_termsHead').value.trim() || 'Terms and Conditions',
       sigLeft: $('re_sigL').value.trim(), sigRight: $('re_sigR').value.trim(),
       ownership: ownVal(), rentTotal: numOrNull(parseFloat($('re_rentTotal').value)), rentTermValue: numOrNull(parseInt($('re_termVal').value, 10)),
       rentTermUnit: $('re_termUnit').value, rentStart: $('re_rentStart').value,
@@ -3350,8 +3354,8 @@
         .withFailureHandler(function(e){if (TOKEN !== token) return; sessionLoading=false;if (!authFail(e)) menuNote('Could not load the app: '+e.message,true);})
         .getSessionBootstrap(token, imgOpts_());
     } else {      // opened outside Google (local preview only): a single sample resort, no data
-      applyConfig({settings: CFG.settings, defaultResort: 'My Resort', resorts: [{name:'My Resort', active:true, style:'Modern', headerName:'My Resort', title:'BOOKING CONFIRMATION',
-        contactPerson:'', phone:'', address:'', web:'', c1:'#0b93a6', c2:'#7ad45c', terms:'Full payment must be settled upon arrival.', notes:'', deposit:'', exclHeading:'Exclusions / Add-ons', thanks:'THANK YOU', termsHeading:'Terms and Conditions',
+      applyConfig({settings: CFG.settings, defaultResort: 'My Resort', resorts: [{name:'My Resort', active:true, style:'Modern', headerName:'My Resort', title:'RESERVATION CONFIRMATION',
+        contactPerson:'', phone:'', address:'', web:'', c1:'#0b93a6', c2:'#7ad45c', terms:'Full payment must be settled upon arrival.', notes:'', deposit:'', exclHeading:'OPTIONAL ADD-ONS', thanks:'THANK YOU', termsHeading:'Terms and Conditions',
         sigLeft:'', sigRight:'', labels:{invoiceNo:'Invoice No.', bookingFee:'Booking Fee', downPayment:'Down Payment', pax:'# of Pax', marketer:'Agent', checkIn:'Check-In', checkOut:'Check-Out'}, logo:'', bg:''}]});
       menuNote('');
     }

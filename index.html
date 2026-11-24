@@ -607,8 +607,8 @@
     <div class="list" style="padding:0 0 4px"><div class="cal-grid" id="calGrid"></div></div>
     <div class="cal-legend">
       <div id="calKey"></div>
-      Each date box is split in two: <b>upper-left = AM</b>, <b>lower-right = PM</b>. Day Tour fills AM, Overnight fills PM, 22 Hours (Morning) fills the whole date,
-      and 22 Hours (Evening) fills PM on check-in and AM on check-out. Custom fills each Day Tour (AM) or Overnight (PM) slot its hours overlap. Stripes mean two bookings share a half.
+      Each date box is split in two: <b>upper-left = AM</b>, <b>lower-right = PM</b>. Day Tour fills AM, Overnight fills PM, <span data-tname="morning22">22 Hours (Morning slot)</span> fills the whole date,
+      and <span data-tname="evening22">22 Hours (Evening slot)</span> fills PM on check-in and AM on check-out. Custom fills each Day Tour (AM) or Overnight (PM) slot its hours overlap. Stripes mean two bookings share a half.
       G# = guest number in check-in order for the month. <b>Tap a date</b> to see its bookings.
     </div>
   </div>
@@ -1065,7 +1065,7 @@
   </div>
 </div>
 
-<script src="app.js?v=4740b4c3c1"></script>
+<script src="app.js?v=7f1a6f45ef"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

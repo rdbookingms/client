@@ -184,13 +184,13 @@
   var TABLE_LAYOUT_NAMES = {col1:'Col 1 (last row)',col2:'Col 2 (last row)',full:'Full Row'};
   var TABLE_FIELD_DEFAULTS = {
     modern: [['bookingFee','col1'],['checkIn','col2'],['downPayment','col1'],['checkOut','col2'],['balance','col1'],['pax','col2'],
-             ['mode','col1'],['additionalFees','col2'],['marketer','full']],
+             ['mode','col1'],['additionalFees','col2'],['marketer','full'],['bookType','full']],
     classic: [['name','col1'],['bookingFee','col2'],['address','col1'],['mode','col2'],['contact','col1'],['downPayment','col2'],
-              ['stayDate','col1'],['balance','col2'],['pax','col1'],['checkInOut','col2'],['marketer','col1'],['additionalFees','col2']]
+              ['stayDate','col1'],['balance','col2'],['pax','col1'],['checkInOut','col2'],['marketer','col1'],['additionalFees','col2'],['bookType','full']]
   };
   var TABLE_FIELD_NAMES = {bookingFee:'Booking fee',downPayment:'Down payment',balance:'Balance',checkIn:'Check-in',checkOut:'Check-out',
     checkInOut:'Check-in / Check-out',pax:'Number of guests',mode:'Mode of payment',additionalFees:'Additional fees',marketer:'Agent',
-    name:'Guest name',address:'Guest address',contact:'Guest contact',stayDate:'Date of reservation'};
+    name:'Guest name',address:'Guest address',contact:'Guest contact',stayDate:'Date of reservation',bookType:'Booking type'};
   function tableStyleKey(style) { return style === 'Classic' ? 'classic' : 'modern'; }
   function tableLayoutDefaults(style, custom) {
     return TABLE_FIELD_DEFAULTS[style].concat(CUSTOM_FIELD_KEYS.map(function(key){ return [key, custom[key].layout]; }));
@@ -224,7 +224,7 @@
       bookingFee:[L.bookingFee || 'Booking Fee', classic ? 'v money' : 'v'], downPayment:[L.downPayment || 'Down Payment', classic ? 'v money' : 'v'],
       balance:['Balance', classic ? 'v money bal' : 'v balance'], checkIn:[ci, 'v'], checkOut:[co, 'v'], pax:[L.pax || '# of Pax', 'v'],
       mode:['Mode of Payment', 'v'], additionalFees:[classic ? 'Additional Fees' : 'Additional Fee/s', 'v'], marketer:[L.marketer || 'Agent', 'v'],
-      name:['Name', 'v'], address:['Address', 'v'], contact:['Contact #', 'v'], stayDate:['Date of Reservation', 'v'],
+      name:['Name', 'v'], address:['Address', 'v'], contact:['Contact #', 'v'], stayDate:['Date of Reservation', 'v'], bookType:['Booking Type', 'v'],
       checkInOut:[ci + ' / ' + co, 'v', '<div>In: <span id="p_checkIn"></span></div><div>Out: <span id="p_checkOut"></span></div>']
     };
   }
@@ -295,7 +295,7 @@
     var options = customFieldConfig(RC());
     CUSTOM_FIELD_KEYS.forEach(function(key){ $('lbl_' + key).textContent = options[key].label; $(key).closest('[data-custom-form]').hidden = !options[key].visible; });
   }
-  var RECEIPT_FIELDS = {invoiceNo:'Invoice number',dpDate:'Down payment date',contact:'Guest contact',address:'Guest address',pax:'Guest count',marketer:'Agent',mode:'Payment method',additionalFees:'Additional fees'};
+  var RECEIPT_FIELDS = {invoiceNo:'Invoice number',dpDate:'Down payment date',contact:'Guest contact',address:'Guest address',pax:'Guest count',marketer:'Agent',mode:'Payment method',additionalFees:'Additional fees',bookType:'Booking type'};
   function applyReceiptVisibility(root, cfg) {
     (cfg.hide || []).forEach(function(key){
       var value = root.querySelector('#p_' + key); if (!value) return;
@@ -771,6 +771,7 @@
       bookingFee: peso(fee), downPayment: peso(dp), balance: peso(bal),
       mode: d.mode || '', checkIn: fmtDateTime(ci), checkOut: fmtDateTime(co),
       pax: d.pax || '', marketer: d.marketer || '',
+      bookType: d.bookType ? bookingTypeName({bookType:d.bookType, checkIn:ci, checkOut:co}, d.resort) : '',
       roomsIncluded:d.roomsIncluded === undefined || d.roomsIncluded === null ? '' : String(d.roomsIncluded),
       extraField1:d.extraField1 === undefined || d.extraField1 === null ? '' : String(d.extraField1),
       extraField2:d.extraField2 === undefined || d.extraField2 === null ? '' : String(d.extraField2),
@@ -798,7 +799,7 @@
       name: $('name').value, contact: $('contact').value, address: $('address').value, invoiceNo: $('invoiceNo').value,
       dpDate: $('dpDate').value, bookingDate: $('dpDate').value,
       bookingFee: $('bookingFee').value, downPayment: $('downPayment').value, balance: bal,
-      mode: $('mode').value, checkIn: $('checkIn').value, checkOut: $('checkOut').value,
+      mode: $('mode').value, checkIn: $('checkIn').value, checkOut: $('checkOut').value, bookType: $('bookType').value, resort: $('resort').value,
       pax: $('pax').value, marketer: agentNameVal(), roomsIncluded:$('roomsIncluded').value,extraField1:$('extraField1').value,extraField2:$('extraField2').value,extraField3:$('extraField3').value
     }));
     var rrows = rows.concat(freeRowsFor($('resort').value).filter(function(f){ return !rows.some(function(r){ return r.name === f.name; }); }));
@@ -921,7 +922,7 @@
         (c ? '<span class="tag">Overlaps your dates</span>' : '') +
         '<div class="dt">In: ' + esc(fmtDateTime(b.checkIn.replace(' ','T'))) + '</div>' +
         '<div class="dt">Out: ' + esc(fmtDateTime(b.checkOut.replace(' ','T'))) + '</div>' +
-        (b.bookType ? '<div class="dt">Type: ' + esc(TYPE_LABELS[b.bookType] || '') + '</div>' : '') + '<div class="dt">' + esc(b.invoiceNo) + (b.pax ? ' &middot; ' + esc(b.pax) + ' pax' : '') + '</div>' +
+        (b.bookType ? '<div class="dt">Type: ' + esc(bookingTypeName(b)) + '</div>' : '') + '<div class="dt">' + esc(b.invoiceNo) + (b.pax ? ' &middot; ' + esc(b.pax) + ' pax' : '') + '</div>' +
         (b.notes ? '<div class="up-notes"><b>Notes:</b> ' + esc(b.notes) + '</div>' : '') +
         '<div class="actions">' +
           (canceled ? '' : '<button type="button" class="btn-regen" data-i="' + r.i + '">Regenerate Receipt</button><button type="button" class="btn-edit" data-i="' + r.i + '">Modify</button><button type="button" class="btn-cancel" data-i="' + r.i + '">Cancel Booking</button>') +
@@ -1104,6 +1105,24 @@
   /* ---------- booking type (date + 5 options) ---------- */
   var TYPE_KEYS = ['day','overnight','morning22','evening22'];
   var TYPE_LABELS = {day:'Day Tour', overnight:'Overnight', morning22:'22 Hours (Morning slot)', evening22:'22 Hours (Evening slot)', custom:'Custom Date and Time'};
+  /* The 22 Hours names follow their hours: "20 Hours (Morning slot)" when check-out is 2 hours earlier. */
+  var SLOT_WORD = {morning22:'Morning', evening22:'Evening'};
+  function hoursText_(h) { h = Math.round(h * 2) / 2; return (h % 1 ? h.toFixed(1) : String(h)) + (h === 1 ? ' Hour' : ' Hours'); }
+  function slotName_(k, c) {                                   // a type's name from its times {inT, outT, days}
+    if (!SLOT_WORD[k] || !c || !c.inT || !c.outT) return TYPE_LABELS[k] || '';
+    var a = c.inT.split(':').map(Number), b = c.outT.split(':').map(Number), m = (b[0] * 60 + b[1]) - (a[0] * 60 + a[1]) + (c.days ? 1440 : 0);
+    if (m <= 0) m += 1440;
+    return hoursText_(m / 60) + ' (' + SLOT_WORD[k] + ' slot)';
+  }
+  function typeName(k, resort, times) { var T = times || BT(resort); return slotName_(k, T && T[k]); }      // from the resort's current times
+  function bookingTypeName(b, resort) {                        // a saved booking: from its own check-in and check-out (keeps its name)
+    var k = b && b.bookType;
+    if (SLOT_WORD[k] && b.checkIn && b.checkOut) {
+      var h = (pdate(String(b.checkIn).replace('T', ' ').slice(0, 16)) - pdate(String(b.checkOut).replace('T', ' ').slice(0, 16))) / -3600000;
+      if (h > 0) return hoursText_(h) + ' (' + SLOT_WORD[k] + ' slot)';
+    }
+    return k ? typeName(k, resort || (b && b.resort)) : '';
+  }
   var SHADE_DEFAULT = {day:'#5fcf6b', overnight:'#ffd43b', morning22:'#7cc9f0', evening22:'#1f3a8f', custom:'#b98ce8'};
   var TYPE_COLORS = {day:'#5fcf6b', overnight:'#ffd43b', morning22:'#7cc9f0', evening22:'#1f3a8f', custom:'#b98ce8'};
   var TYPE_TEXT   = {day:'#0d3b17', overnight:'#4a3500', morning22:'#08324d', evening22:'#ffffff', custom:'#1d0b36'};   // readable text on each colour (WCAG 5:1 or better)
@@ -1125,8 +1144,8 @@
     });
     var out = {}; for (var k in TYPE_COLORS) out[k] = TYPE_COLORS[k]; return out;
   }
-  function keyHtml_() {
-    return TYPE_KEYS.concat(['custom']).map(function(k){ return '<span class="key"><i style="background:' + TYPE_COLORS[k] + '"></i>' + TYPE_LABELS[k] + '</span>'; }).join('') +
+  function keyHtml_(resort, times) {
+    return TYPE_KEYS.concat(['custom']).map(function(k){ return '<span class="key"><i style="background:' + TYPE_COLORS[k] + '"></i>' + esc(typeName(k, resort, times)) + '</span>'; }).join('') +
       '<span class="key"><i style="background:repeating-linear-gradient(45deg,' + TYPE_COLORS.day + ' 0 3px,' + TYPE_COLORS.overnight + ' 3px 6px)"></i>Overlap</span>';
   }
   // Times are loaded from the 'Booking Types' sheet (one set per resort); these are only the starting defaults.
@@ -1154,7 +1173,7 @@
     TYPE_KEYS.forEach(function(k){
       var c = T[k];
       if (c.enabled === false) return;
-      html += '<option value="' + k + '">' + TYPE_LABELS[k] + ' (' + t12(c.inT) + ' to ' + t12(c.outT) + ')</option>';
+      html += '<option value="' + k + '">' + esc(slotName_(k, c)) + ' (' + t12(c.inT) + ' to ' + t12(c.outT) + ')</option>';
     });
     return html + '<option value="custom">' + TYPE_LABELS.custom + '</option>';
   }
@@ -1227,7 +1246,8 @@
     return (h % 12 || 12) + (m ? ':' + pad2(m) : '') + (h >= 12 ? 'p' : 'a');
   }
   function dstr(y, m, d) { var x = new Date(y, m, d); return x.getFullYear() + '-' + pad2(x.getMonth() + 1) + '-' + pad2(x.getDate()); }
-  function fillKey() { applyShades(shadesOf($('calResort').value)); $('calKey').innerHTML = keyHtml_(); }
+  function fillKey() { applyShades(shadesOf($('calResort').value)); $('calKey').innerHTML = keyHtml_($('calResort').value); legendNames_($('calResort').value); }
+  function legendNames_(resort, times) { [].forEach.call(document.querySelectorAll('[data-tname]'), function(el){ el.textContent = typeName(el.getAttribute('data-tname'), resort, times); }); }
   function openCalendar() {
     var d = $('stayDate').value ? new Date($('stayDate').value + 'T00:00:00') : new Date();
     calY = d.getFullYear(); calM = d.getMonth();
@@ -1529,13 +1549,15 @@
     TYPE_KEYS.concat(['custom']).forEach(function(k){
       g.fillStyle = TYPE_COLORS[k]; g.fillRect(lx, ly - 12, 16, 16);
       g.strokeStyle = 'rgba(0,0,0,.3)'; g.strokeRect(lx + .5, ly - 11.5, 15, 15);
-      g.fillStyle = '#17333a'; g.fillText(TYPE_LABELS[k], lx + 22, ly);
-      lx += 22 + g.measureText(TYPE_LABELS[k]).width + 18;
+      var tn = typeName(k, M.resort, M.types);
+      g.fillStyle = '#17333a'; g.fillText(tn, lx + 22, ly);
+      lx += 22 + g.measureText(tn).width + 18;
     });
     g.font = '500 12.5px ' + F; g.fillStyle = '#5b6f75';
-    g.fillText('Upper-left = AM, lower-right = PM. Day Tour fills AM; Overnight fills PM; 22 Hours (Morning) fills the whole date;', pad, ly + 30);
-    g.fillText('22 Hours (Evening) fills PM on check-in and AM on check-out. Custom fills each Day Tour / Overnight slot it overlaps. Stripes = two bookings share a half.', pad, ly + 50);
-    g.fillText('Labels: G# = guest number (check-in order this month) with its times; 22 Hours (Evening) and Custom show IN on check-in and OUT on check-out.', pad, ly + 70);
+    var nMo = typeName('morning22', M.resort, M.types), nEv = typeName('evening22', M.resort, M.types);
+    g.fillText('Upper-left = AM, lower-right = PM. Day Tour fills AM; Overnight fills PM; ' + nMo + ' fills the whole date;', pad, ly + 30);
+    g.fillText(nEv + ' fills PM on check-in and AM on check-out. Custom fills each Day Tour / Overnight slot it overlaps. Stripes = two bookings share a half.', pad, ly + 50);
+    g.fillText('Labels: G# = guest number (check-in order this month) with its times; ' + nEv + ' and Custom show IN on check-in and OUT on check-out.', pad, ly + 70);
     var a = document.createElement('a');
     a.download = 'Calendar_' + M.resort.replace(/[^a-z0-9]+/gi, '-') + '_' + M.y + '-' + pad2(M.m + 1) + '.png';
     a.href = cv.toDataURL('image/png');
@@ -1709,7 +1731,7 @@
     if (MONEY[k]) return peso(parseFloat(v)) || '(blank)';
     if (k === 'dpDate') return fmtDate(v);
     if (k === 'checkIn' || k === 'checkOut') return fmtDateTime(v);
-    if (k === 'bookType') return TYPE_LABELS[v] || String(v);
+    if (k === 'bookType') return typeName(v, $('resort').value) || String(v);
     if (k === 'agentPct') return v + '%';
     return String(v);
   }
@@ -1928,7 +1950,7 @@
   }
   function qdHit(b, withType) {
     return '<div class="qd-hit"><span class="qd-flag">Conflict</span><b>' + esc(b.name) + '</b> &middot; ' + esc(b.invoiceNo) +
-           (withType ? ' &middot; ' + esc(TYPE_LABELS[b.bookType] || 'Custom') : '') +
+           (withType ? ' &middot; ' + esc(b.bookType ? bookingTypeName(b) : 'Custom') : '') +
            '<br>In: ' + esc(fmtDateTime(b.checkIn.replace(' ', 'T'))) + '<br>Out: ' + esc(fmtDateTime(b.checkOut.replace(' ', 'T'))) + '</div>';
   }
   // list = every booking of the resort that touches the date or the morning after it
@@ -1950,7 +1972,7 @@
 
     types.forEach(function(x){
       var taken = x.hits.length > 0, c = x.c;
-      h += '<div class="qd-card' + (taken ? ' taken' : '') + '"><div class="qh"><span>' + esc(TYPE_LABELS[x.k]) + '</span>' +
+      h += '<div class="qd-card' + (taken ? ' taken' : '') + '"><div class="qh"><span>' + esc(slotName_(x.k, x.c)) + '</span>' +
            '<span class="qd-chip ' + (taken ? 'taken' : 'free') + '">' + (taken ? 'Not available' : 'Available') + '</span></div>' +
            '<div class="qt">' + esc(t12(c.inT)) + ' to ' + esc(t12(c.outT)) + (c.days ? ' (next day)' : ' (same day)') + '</div>' +
            x.hits.map(function(b){ return qdHit(b, true); }).join('') + '</div>';
@@ -1960,8 +1982,8 @@
     h += '<div class="qd-sec">Bookings on ' + esc(fmtDate(day)) + ' (' + onDay.length + ')</div>';
     if (!onDay.length) h += '<div class="qd-res ok" style="margin-top:8px">No guest is booked on this date.</div>';
     onDay.forEach(function(b){
-      var blocks = types.filter(function(x){ return x.hits.indexOf(b) > -1; }).map(function(x){ return TYPE_LABELS[x.k]; });
-      h += '<div class="qd-hit" style="border-color:#dbe6e8;color:var(--ink)"><b>' + esc(b.name) + '</b> &middot; ' + esc(b.invoiceNo) + ' &middot; ' + esc(TYPE_LABELS[b.bookType] || 'Custom') +
+      var blocks = types.filter(function(x){ return x.hits.indexOf(b) > -1; }).map(function(x){ return slotName_(x.k, x.c); });
+      h += '<div class="qd-hit" style="border-color:#dbe6e8;color:var(--ink)"><b>' + esc(b.name) + '</b> &middot; ' + esc(b.invoiceNo) + ' &middot; ' + esc(b.bookType ? bookingTypeName(b) : 'Custom') +
            '<br>In: ' + esc(fmtDateTime(b.checkIn.replace(' ', 'T'))) + '<br>Out: ' + esc(fmtDateTime(b.checkOut.replace(' ', 'T'))) +
            '<br>' + (blocks.length ? '<span class="qd-flag">Blocks</span>' + esc(blocks.join(', ')) : '<span style="color:var(--muted)">Does not block any standard booking type.</span>') + '</div>';
     });
@@ -2323,13 +2345,14 @@
     var h = '<tr><th>Booking type</th><th>Check-in time</th><th>Check-out time</th><th>Check-out day</th><th>Enabled</th></tr>';
     TYPE_KEYS.forEach(function(k){
       var c = T[k];
-      h += '<tr><td class="tt-name"><b>' + TYPE_LABELS[k] + '</b></td>' +
+      h += '<tr><td class="tt-name"><b data-tt-name="' + k + '">' + esc(slotName_(k, c)) + '</b></td>' +
         '<td data-label="Check-in"><input type="time" data-k="' + k + '" data-f="in" value="' + c.inT + '"></td>' +
         '<td data-label="Check-out"><input type="time" data-k="' + k + '" data-f="out" value="' + c.outT + '"></td>' +
         '<td data-label="Check-out day"><select data-k="' + k + '" data-f="days"><option value="0"' + (c.days ? '' : ' selected') + '>Same day</option><option value="1"' + (c.days ? ' selected' : '') + '>Next day</option></select></td>' +
         '<td data-label="Enabled" class="tt-en"><input type="checkbox" data-k="' + k + '" data-f="enabled" style="width:20px;height:20px"' + (c.enabled === false ? '' : ' checked') + '></td></tr>';
     });
     $('admTimes').innerHTML = h;
+    ttNames_();
     $('admFees').innerHTML = ''; $('admAmen').innerHTML = '';
     var shared = [];
     // a 0-priced item is a free amenity: it is listed in its own section
@@ -2339,6 +2362,14 @@
     sh.style.display = shared.length ? '' : 'none';
     sh.textContent = shared.length ? 'Shared with all resorts (set to "Both" in the Fees sheet, change them there): ' + shared.join(', ') : '';
     admDirty = {times:false, fees:false};
+  }
+  // the 22 Hours names follow the times while they are being edited
+  function ttNames_() {
+    ['morning22', 'evening22'].forEach(function(k){
+      var el = document.querySelector('#admTimes [data-tt-name="' + k + '"]'); if (!el) return;
+      var v = function(f){ var x = document.querySelector('#admTimes [data-k="' + k + '"][data-f="' + f + '"]'); return x ? x.value : ''; };
+      el.textContent = slotName_(k, {inT:v('in'), outT:v('out'), days:v('days') === '1' ? 1 : 0});
+    });
   }
   function emptyNote_(id) {
     if ($(id).children.length) return;
@@ -2605,7 +2636,8 @@
   function renderShadeEditor(sh) {
     $('re_shades').innerHTML = Object.keys(SHADE_DEFAULT).map(function(k){
       var c = sh && /^#[0-9a-fA-F]{6}$/.test(String(sh[k] || '')) ? String(sh[k]).toLowerCase() : SHADE_DEFAULT[k];
-      return '<div class="shade-row"><span>' + esc(TYPE_LABELS[k]) + '</span><input type="color" data-shade="' + k + '" value="' + c + '" aria-label="' + esc(TYPE_LABELS[k]) + ' color">' +
+      var nm = typeName(k, (resEd && resEd.orig) || undefined);
+      return '<div class="shade-row"><span>' + esc(nm) + '</span><input type="color" data-shade="' + k + '" value="' + c + '" aria-label="' + esc(nm) + ' color">' +
         '<button class="ghost-btn" type="button" data-shade-reset="' + k + '"' + (c === SHADE_DEFAULT[k] ? ' disabled' : '') + '>Reset</button></div>';
     }).join('');
   }
@@ -3468,8 +3500,8 @@
     }
     admLastResort = $('admResort').value; admMsg('admTimesMsg', ''); admMsg('admFeesMsg', ''); renderTimesAndFees();
   });
-  $('admTimes').addEventListener('input', function(){ markDirty('times'); });
-  $('admTimes').addEventListener('change', function(){ markDirty('times'); });
+  $('admTimes').addEventListener('input', function(){ markDirty('times'); ttNames_(); });
+  $('admTimes').addEventListener('change', function(){ markDirty('times'); ttNames_(); });
   ['admFees', 'admAmen'].forEach(function(id){
     $(id).addEventListener('input', function(){ markDirty('fees'); });
     $(id).addEventListener('change', function(e){
@@ -4186,7 +4218,7 @@
         var times = (r.types || {})[r.resort] || defaultTimes();
         pcModel = buildCalModel(r.list || [], {y:year, m:month, resort:r.resort, types:times, shades:r.shades || null}); pcModel.types = times;
         $('pcGrid').innerHTML = calendarHtml(pcModel);
-        $('pcKey').innerHTML = keyHtml_();
+        $('pcKey').innerHTML = keyHtml_(r.resort, times);
         $('pcLegend').hidden = false;
       } catch (e) {
         pcModel = null;
@@ -4216,7 +4248,7 @@
       return '<i style="left:' + (x.a / 24 * 100).toFixed(2) + '%;width:' + ((x.z - x.a) / 24 * 100).toFixed(2) + '%;background:' + (TYPE_COLORS[x.type] || TYPE_COLORS.custom) + '" title="' + esc(hrTxt_(x.a) + ' - ' + hrTxt_(x.z)) + '"></i>';
     }).join('');
   }
-  function typeChip_(t) { t = TYPE_COLORS[t] ? t : 'custom'; return '<span class="dd-type" style="background:' + TYPE_COLORS[t] + ';color:' + TYPE_TEXT[t] + '">' + esc(TYPE_LABELS[t]) + '</span>'; }
+  function typeChip_(t, b) { t = TYPE_COLORS[t] ? t : 'custom'; return '<span class="dd-type" style="background:' + TYPE_COLORS[t] + ';color:' + TYPE_TEXT[t] + '">' + esc(b ? bookingTypeName({bookType:t, checkIn:b.checkIn, checkOut:b.checkOut}, b.resort) : TYPE_LABELS[t]) + '</span>'; }
   function openDayDetails(model, ds, signedIn) {
     if (model && model.shades) applyShades(model.shades);
     var cell = null; (model && model.cells || []).forEach(function(c){ if (c.ds === ds) cell = c; });
@@ -4233,7 +4265,7 @@
     }
     if (!signedIn) {
       $('dayList').innerHTML = list.map(function(x){
-        return '<div class="dd-card" style="border-left-color:' + (TYPE_COLORS[x.type] || TYPE_COLORS.custom) + '"><h4>Guest ' + (x.guest || '?') + '</h4>' + typeChip_(x.type) +
+        return '<div class="dd-card" style="border-left-color:' + (TYPE_COLORS[x.type] || TYPE_COLORS.custom) + '"><h4>Guest ' + (x.guest || '?') + '</h4>' + typeChip_(x.type, x) +
                '<dl class="dd-grid">' + timeRows(x) + '</dl></div>';
       }).join('') + '<div class="dd-empty" style="padding:8px 0;font-size:12.5px">Guest names and payment details are shown after you sign in with your PIN.</div>';
       return;
@@ -4258,7 +4290,7 @@
             '<dt>Payment</dt><dd>' + paid + '</dd>' +
             (r.marketer ? '<dt>Referred by</dt><dd>' + esc(r.marketer) + '</dd>' : '');
           return '<div class="dd-card" style="border-left-color:' + TYPE_COLORS[t] + '"><h4>' + esc(r.name || 'Guest') + ' <small>' + (g && g.guest ? 'Guest ' + g.guest + ' · ' : '') + 'Invoice ' + esc(r.invoiceNo) + '</small></h4>' +
-                 typeChip_(t) + '<dl class="dd-grid">' + rowsHtml + '</dl>' + (r.notes ? '<div class="dd-notes">' + esc(r.notes) + '</div>' : '') + '</div>';
+                 typeChip_(t, r) + '<dl class="dd-grid">' + rowsHtml + '</dl>' + (r.notes ? '<div class="dd-notes">' + esc(r.notes) + '</div>' : '') + '</div>';
         }).join('');
       })
       .withFailureHandler(function(e){ if (req !== dayReq) return; if (authFail(e)) return; $('dayList').innerHTML = '<div class="dd-empty">Could not load the details: ' + esc(e.message) + '</div>'; })

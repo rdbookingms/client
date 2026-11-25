@@ -788,13 +788,14 @@
   function update() {
     var fee = parseFloat($('bookingFee').value);
     var dp  = parseFloat($('downPayment').value);
-    var frozen = editing && editing.financialLocked && editing.financial;
+    var frozen = null;          // amounts are editable on every booking (update 31)
     var rows = domRows(), ft = frozen ? Number(frozen.feesTotal)||0 : feesTotal(rows);
     $('additionalFees').value = frozen ? frozen.additionalFees : summaryOf(rows);
     $('feesDetail').value = frozen ? frozen.feesDetail : JSON.stringify(detailOf(rows));
     $('feeTotal').textContent = ft || rows.some(function(r){ return r.on; }) ? 'Additional fees total: ' + peso(ft) : '';
     var bal = frozen ? Number(frozen.balance)||0 : (isNaN(fee) ? '' : (fee + ft - (isNaN(dp) ? 0 : dp)));
     $('balance').value = bal === '' ? '' : bal.toFixed(2);
+    editTotals_(fee, dp, ft);
 
     var root = $('receipt');
     fillMap(root, receiptMap({
@@ -811,6 +812,24 @@
     showAgentUI();
   }
 
+  /* Modify form: Grand Total and Remaining Balance (read-only) follow the fee, down payment and add-ons as they change. */
+  function editTotals_(fee, dp, ft) {
+    var box = $('edTotals'); if (!box) return;
+    if (!editing) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    fee = isNaN(fee) ? 0 : fee; dp = isNaN(dp) ? 0 : dp;
+    var xtra = editing.extras || 0, paid = editing.paidLater || 0, grand = fee + ft + xtra, remain = Math.round((grand - dp - paid) * 100) / 100;
+    $('edGrand').value = peso(grand) + (xtra ? '  (incl. ' + peso(xtra) + ' extra charges)' : '');
+    $('edPaidWrap').style.display = paid ? '' : 'none'; $('edPaid').value = peso(paid);
+    $('edRemain').value = peso(Math.max(0, remain));
+    editing.overpaid = remain < -0.004 ? -remain : 0;
+    var st = $('edState'), closedish = editing.wasSettled || paid > 0;
+    if (dp > fee + 0.004) { st.className = 'ed-state over'; st.textContent = 'The down payment can\u2019t be more than the booking fee.'; }
+    else if (editing.overpaid) { st.className = 'ed-state over'; st.textContent = 'Overpaid by ' + peso(editing.overpaid) + '. The payments already received are more than the new total. Check the amounts before saving.'; }
+    else if (!closedish) { st.className = 'ed-state'; st.textContent = ''; }
+    else if (remain < 0.005) { st.className = 'ed-state ok'; st.textContent = 'Fully paid. ' + (editing.closed ? 'Saving closes the booking again (settled).' : 'The booking stays settled.'); }
+    else { st.className = 'ed-state due'; st.textContent = 'Guest owes ' + peso(remain) + '. Saving keeps it open (Balance due) until you use Mark as Paid.'; }
+  }
   function fitPreview() {
     var wrap = $('previewWrap'), sc = $('scaler'), r = $('receipt');
     if (!wrap.clientWidth) return;
@@ -1648,7 +1667,6 @@
       notes: $('notes').value, proof: proofData, isUpdate: isUpdate,
       roomsIncluded:$('roomsIncluded').value,extraField1:$('extraField1').value,extraField2:$('extraField2').value,extraField3:$('extraField3').value
     };
-    if (editing && editing.financialLocked && editing.financial) Object.keys(editing.financial).forEach(function(key){data[key]=editing.financial[key];});
     return data;
   }
 
@@ -1744,8 +1762,8 @@
     var on = !!editing;
     $('resort').disabled = on;
     $('editBanner').style.display = on ? 'block' : 'none';
-    if (on && editing.closed) $('editBanner').textContent = 'Modifying booking ' + editing.invoiceNo + '. This closed booking is reopened for editing. Payment amounts, charges and the agent commission stay locked. Saving needs a code sent to the business email, then the booking closes again.';
-    else if (on) $('editBanner').textContent = 'Modifying booking ' + editing.invoiceNo + (editing.financialLocked ? '. This booking is settled. Payment amounts and charges are locked; other details can still be edited.' : '. Change the details, then review and save.');
+    if (on && editing.closed) $('editBanner').textContent = 'Modifying booking ' + editing.invoiceNo + '. This closed booking is reopened for editing. Booking fee, down payment, add-ons and agent can be changed; the totals update automatically. Saving needs a code sent to the business email.';
+    else if (on) $('editBanner').textContent = 'Modifying booking ' + editing.invoiceNo + (editing.wasSettled ? '. This booking is settled. Amounts can be changed; the totals update automatically.' : '. Change the details, then review and save.');
     applyPaymentLock();
     $('btnDownload').style.display = on ? 'none' : '';
     $('btnSaveRecord').style.display = on ? 'none' : '';
@@ -1756,8 +1774,6 @@
     var locked = !!(editing && editing.financialLocked);
     ['bookingFee','downPayment'].forEach(function(id){ $(id).readOnly = locked; });
     Array.prototype.forEach.call($('feeList').querySelectorAll('input'),function(input){input.disabled=locked;});
-    var agentLock = !!(editing && editing.closed);        // commission is worked out from these, so it stays as settled
-    Array.prototype.forEach.call(document.querySelectorAll('input[name=referred],input[name=agentPct],#agentPctOther'),function(input){input.disabled=agentLock;});
   }
   function startEdit(i) {
     var b = upcoming[i]; if (!b) return;
@@ -1807,7 +1823,8 @@
         applyBookType(true);
         showScreen('form');
         fitPreview();
-        editing = { invoiceNo: d.invoiceNo,financialLocked:!!d.settledOn || d.extrasLocked === true || d.reopened === true, closed: !!closed };
+        editing = { invoiceNo: d.invoiceNo, financialLocked: false, closed: !!closed, wasSettled: !!d.settledOn || d.reopened === true || d.balanceDue === true,
+                    extras: Number(d.extraCharges) || 0, paidLater: Number(d.balancePaidLater) || 0 };
         if (editing.financialLocked) {
           editing.financial = {};
           ['bookingFee','downPayment','balance','feesTotal','feesDetail','additionalFees'].forEach(function(key){editing.financial[key]=d[key] === undefined ? '' : d[key];});
@@ -1822,6 +1839,8 @@
     if (!editing || saving) return;
     var missing = validate();
     if (missing.length) { setStatus('Please fill in: ' + missing.join(', '), 'err'); return; }
+    update();
+    if (editing.overpaid) { markMissing(['bookingFee', 'downPayment']); setStatus('Overpaid by ' + peso(editing.overpaid) + '. Check the amounts before saving.', 'err'); return; }
     checkConflict();
     if (conflictBlocks_()) { markMissing(['checkIn', 'checkOut']); setStatus(CONFLICT_MSG, 'err'); return; }
     var now = snapshot(), rows = [];
@@ -2000,7 +2019,7 @@
     if (!rows.length) { $('clList').innerHTML = '<div class="cl-empty">' + (CLOSED.length ? 'No closed bookings match that search.' : 'No settled bookings in the last 3 months.') + '</div>'; return; }
     $('clList').innerHTML = '<table class="cl-table"><thead><tr><th>Invoice no.</th><th>Guest</th><th class="cl-hide">Resort</th><th class="cl-hide">Booking type</th><th>Check-in</th><th class="cl-hide">Check-out</th><th></th></tr></thead><tbody>' +
       rows.map(function(b){
-        return '<tr class="cl-row" data-inv="' + esc(b.invoiceNo) + '"><td class="cl-inv">' + esc(b.invoiceNo) + (b.reopened ? '<span class="cl-tag">Reopened</span>' : '') + '</td><td>' + esc(b.name) + '</td><td class="cl-hide">' + esc(b.resort) + '</td>' +
+        return '<tr class="cl-row" data-inv="' + esc(b.invoiceNo) + '"><td class="cl-inv">' + esc(b.invoiceNo) + (b.reopened ? '<span class="cl-tag">Reopened</span>' : b.balanceDue ? '<span class="cl-tag">Balance due ' + esc(peso(b.balance || 0)) + '</span>' : '') + '</td><td>' + esc(b.name) + '</td><td class="cl-hide">' + esc(b.resort) + '</td>' +
           '<td class="cl-hide">' + esc(b.bookType ? bookingTypeName(b) : (b.typeName || '')) + '</td><td>' + esc(clDateText_(b.checkIn)) + '</td><td class="cl-hide">' + esc(clDateText_(b.checkOut)) + '</td>' +
           '<td><button class="ghost cl-ed-btn" type="button" data-inv="' + esc(b.invoiceNo) + '">Edit</button></td></tr>';
       }).join('') + '</tbody></table>';

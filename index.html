@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=2a8abf27e8">
+<link rel="stylesheet" href="app.css?v=3b8ccc1aa9">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -519,6 +519,14 @@
       <div><label id="lbl_downPayment">Down Payment</label><input id="downPayment" type="number" min="0" step="0.01"></div>
     </div>
     <label id="lbl_balance">Balance (auto)</label><input id="balance" readonly>
+    <div class="ed-tot" id="edTotals" style="display:none">
+      <div class="ed-grid">
+        <div><label>Grand total (auto)</label><input id="edGrand" readonly tabindex="-1"></div>
+        <div id="edPaidWrap"><label>Balance already paid</label><input id="edPaid" readonly tabindex="-1"></div>
+        <div><label>Remaining balance (auto)</label><input id="edRemain" readonly tabindex="-1"></div>
+      </div>
+      <div class="ed-state" id="edState"></div>
+    </div>
     <label id="lbl_mode">Mode of Payment *</label>
     <select id="mode">
       <option value="">Select...</option>
@@ -1095,7 +1103,7 @@
   </div>
 </div>
 
-<script src="app.js?v=c0ae1f51d7"></script>
+<script src="app.js?v=890b9ce635"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

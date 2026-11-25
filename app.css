@@ -60,6 +60,12 @@
   .fee-list svg { flex:none; }
   .fee-sum { font-size:12px; font-weight:500; color:#4a5f65; margin-top:2px; }
   .btn-edit { background:#e3f1f3; color:#0b6d79; padding:7px 12px; font-size:13px; border-radius:8px; margin-right:6px; margin-bottom:4px; }
+  .ed-tot { margin-top:8px; }
+  .ed-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0 12px; }
+  .ed-grid input { background:#f1f5f6; color:#33525a; font-weight:600; }
+  .ed-state { border-radius:8px; padding:8px 10px; font-size:13px; margin-top:8px; line-height:1.45; }
+  .ed-state.ok { background:#e6f5ec; color:#1e6b3c; } .ed-state.due { background:#fff3dc; color:#8a5a00; } .ed-state.over { background:#fde8e6; color:#a3271b; }
+  .ed-state:empty { display:none; }
   .edit-banner { display:none; background:#e3f1f3; border-left:5px solid var(--teal); border-radius:8px; padding:10px 12px; font-size:13px; font-weight:600; margin-bottom:10px; }
   table.diff { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
   table.diff th { text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:4px 6px; }

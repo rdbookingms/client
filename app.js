@@ -818,16 +818,18 @@
     if (!editing) { box.style.display = 'none'; return; }
     box.style.display = '';
     fee = isNaN(fee) ? 0 : fee; dp = isNaN(dp) ? 0 : dp;
-    var xtra = editing.extras || 0, paid = editing.paidLater || 0, grand = fee + ft + xtra, remain = Math.round((grand - dp - paid) * 100) / 100;
+    var xtra = editing.extras || 0, paid0 = editing.paidLater || 0, grand = fee + ft + xtra, remain = Math.round((grand - dp - paid0) * 100) / 100, paid = paid0;
+    if (remain < -0.004 && paid0 > 0) { paid = Math.max(0, Math.round((paid0 + remain) * 100) / 100); remain = Math.round((grand - dp - paid) * 100) / 100; }   // lowered amount: the settled amount follows
+    editing.paidAdjusted = paid !== paid0 ? paid : null;
     $('edGrand').value = peso(grand) + (xtra ? '  (incl. ' + peso(xtra) + ' extra charges)' : '');
-    $('edPaidWrap').style.display = paid ? '' : 'none'; $('edPaid').value = peso(paid);
+    $('edPaidWrap').style.display = paid0 ? '' : 'none'; $('edPaid').value = peso(paid) + (paid !== paid0 ? '  (was ' + peso(paid0) + ')' : '');
     $('edRemain').value = peso(Math.max(0, remain));
     editing.overpaid = remain < -0.004 ? -remain : 0;
     var st = $('edState'), closedish = editing.wasSettled || paid > 0;
     if (dp > fee + 0.004) { st.className = 'ed-state over'; st.textContent = 'The down payment can\u2019t be more than the booking fee.'; }
     else if (editing.overpaid) { st.className = 'ed-state over'; st.textContent = 'Overpaid by ' + peso(editing.overpaid) + '. The payments already received are more than the new total. Check the amounts before saving.'; }
     else if (!closedish) { st.className = 'ed-state'; st.textContent = ''; }
-    else if (remain < 0.005) { st.className = 'ed-state ok'; st.textContent = 'Fully paid. ' + (editing.closed ? 'Saving closes the booking again (settled).' : 'The booking stays settled.'); }
+    else if (remain < 0.005) { st.className = 'ed-state ok'; st.textContent = (editing.paidAdjusted !== null ? 'Fully settled. The settled amount is lowered from ' + peso(paid0) + ' to ' + peso(paid) + ' to match the new total. ' : 'Fully paid. ') + (editing.closed ? 'Saving closes the booking again (settled).' : 'The booking stays settled.'); }
     else { st.className = 'ed-state due'; st.textContent = 'Guest owes ' + peso(remain) + '. Saving keeps it open (Balance due) until you use Mark as Paid.'; }
   }
   function fitPreview() {

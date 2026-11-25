@@ -1042,6 +1042,7 @@
 
   /* ---------- new booking ---------- */
   function newBooking() {
+    if (editing && editing.closed && !editing.done) { editing.done = true; releaseReopen_(editing.invoiceNo); }
     FIELDS.forEach(function(f){ $(f).value = ''; });
     $('stayDate').value = ''; $('bookType').value = ''; applyBookType(false);
     setReferred('No'); setPct(CFG.settings.agentDefault);
@@ -1743,7 +1744,8 @@
     var on = !!editing;
     $('resort').disabled = on;
     $('editBanner').style.display = on ? 'block' : 'none';
-    if (on) $('editBanner').textContent = 'Modifying booking ' + editing.invoiceNo + (editing.financialLocked ? '. This booking is settled. Payment amounts and charges are locked; other details can still be edited.' : '. Change the details, then review and save.');
+    if (on && editing.closed) $('editBanner').textContent = 'Modifying booking ' + editing.invoiceNo + '. This closed booking is reopened for editing. Payment amounts, charges and the agent commission stay locked. Saving needs a code sent to the business email, then the booking closes again.';
+    else if (on) $('editBanner').textContent = 'Modifying booking ' + editing.invoiceNo + (editing.financialLocked ? '. This booking is settled. Payment amounts and charges are locked; other details can still be edited.' : '. Change the details, then review and save.');
     applyPaymentLock();
     $('btnDownload').style.display = on ? 'none' : '';
     $('btnSaveRecord').style.display = on ? 'none' : '';
@@ -1754,13 +1756,39 @@
     var locked = !!(editing && editing.financialLocked);
     ['bookingFee','downPayment'].forEach(function(id){ $(id).readOnly = locked; });
     Array.prototype.forEach.call($('feeList').querySelectorAll('input'),function(input){input.disabled=locked;});
+    var agentLock = !!(editing && editing.closed);        // commission is worked out from these, so it stays as settled
+    Array.prototype.forEach.call(document.querySelectorAll('input[name=referred],input[name=agentPct],#agentPctOther'),function(input){input.disabled=agentLock;});
   }
   function startEdit(i) {
     var b = upcoming[i]; if (!b) return;
     $('modalBg').style.display = 'none';
     setStatus('Loading booking...');
     RUN
-      .withSuccessHandler(function(d){
+      .withSuccessHandler(function(d){ loadEditForm_(d, false); })
+      .withFailureHandler(function(e){ if (authFail(e)) return; setStatus('Could not load booking: ' + e.message, 'err'); })
+      .getBooking(TOKEN, b.invoiceNo);
+  }
+  /* A closed booking: reopened in the sheet, then shown in this same Modify form. */
+  function startClosedEdit(inv) {
+    if (saving) return;
+    $('clMsg').textContent = 'Reopening ' + inv + '...';
+    var session = TOKEN;
+    RUN
+      .withSuccessHandler(function(r){
+        if (TOKEN !== session) return;
+        if (!r || !r.ok || !r.booking) { $('clMsg').textContent = (r && r.message) || 'That booking could not be reopened.'; return; }
+        $('clMsg').textContent = ''; loadEditForm_(r.booking, true);
+      })
+      .withFailureHandler(function(e){ if (authFail(e)) return; $('clMsg').textContent = 'Could not reopen the booking: ' + e.message; })
+      .reopenClosedBooking(TOKEN, inv);
+  }
+  /* Puts a reopened booking back to closed (Cancel Editing, leaving the form, signing out). */
+  function releaseReopen_(inv, then) {
+    var done = function(){ if (then) then(); };
+    if (!inv || !TOKEN) { done(); return; }
+    RUN.withSuccessHandler(done).withFailureHandler(done).releaseReopenedBooking(TOKEN, inv);
+  }
+  function loadEditForm_(d, closed) {
         if (!d) { setStatus('Booking not found.', 'err'); return; }
         editing = null;
         $('resort').value = d.resort || DEFAULT_RESORT;
@@ -1779,7 +1807,7 @@
         applyBookType(true);
         showScreen('form');
         fitPreview();
-        editing = { invoiceNo: d.invoiceNo,financialLocked:!!d.settledOn || d.extrasLocked === true };
+        editing = { invoiceNo: d.invoiceNo,financialLocked:!!d.settledOn || d.extrasLocked === true || d.reopened === true, closed: !!closed };
         if (editing.financialLocked) {
           editing.financial = {};
           ['bookingFee','downPayment','balance','feesTotal','feesDetail','additionalFees'].forEach(function(key){editing.financial[key]=d[key] === undefined ? '' : d[key];});
@@ -1789,9 +1817,6 @@
         applyEditUI(); checkConflict();
         setStatus('');
         window.scrollTo({top:0, behavior:'smooth'});
-      })
-      .withFailureHandler(function(e){ if (authFail(e)) return; setStatus('Could not load booking: ' + e.message, 'err'); })
-      .getBooking(TOKEN, b.invoiceNo);
   }
   function reviewChanges() {
     if (!editing || saving) return;
@@ -1819,19 +1844,30 @@
     if (!b) syncSaveLock_();
   }
   function commitEdit(generate) {
-    if (saving) return;
+    if (saving || !editing) return;
     if (conflictBlocks_()) { $('editBg').style.display = 'none'; markMissing(['checkIn', 'checkOut']); setStatus(CONFLICT_MSG, 'err'); return; }
-    saving = true; setEditBusy(true); setStatus('Saving changes...');
-    var session = TOKEN, inv = editing.invoiceNo;
+    if (editing.closed && !editing.code) { $('editBg').style.display = 'none'; editing.generate = !!generate; sendClosedCode(false); return; }
+    saving = true; setEditBusy(true); setStatus('Saving changes...'); setBusy($('btnClOtpGo'), true, 'Saving...');
+    var session = TOKEN, inv = editing.invoiceNo, closed = !!editing.closed, data = collectData(true);
+    if (closed) { data.closedEdit = true; data.closedCode = editing.code; }
     var finish = function(msg, cls, reset) {
       if (TOKEN !== session) return;
-      saving = false; setEditBusy(false); $('editBg').style.display = 'none';
-      if (reset) { newBooking(); showScreen('menu'); menuNote(msg); }
+      saving = false; setEditBusy(false); setBusy($('btnClOtpGo'), false); $('editBg').style.display = 'none'; $('clOtpBg').style.display = 'none';
+      if (reset && closed) { if (editing) editing.done = true; newBooking(); openClosed(msg); }
+      else if (reset) { newBooking(); showScreen('menu'); menuNote(msg); }
       else setStatus(msg, cls);
     };
     RUN
       .withSuccessHandler(function(res){
         if (TOKEN !== session) return;
+        if (res && res.codeError) {                      // wrong or expired code: ask again, nothing was saved
+          saving = false; setEditBusy(false); setBusy($('btnClOtpGo'), false); setStatus('');
+          if (editing) editing.code = '';
+          $('clOtpMsg').style.color = ''; $('clOtpMsg').textContent = res.message || 'That code does not match.';
+          if (res.expired) $('clOtpCode').value = '';
+          $('clOtpBg').style.display = 'flex'; $('clOtpCode').focus(); return;
+        }
+        if (closed) inv += ' (closed again, settled)';
         if (res.refresh) applyBookingRefresh(res.refresh);
         else { dashLoadedAt = 0; loadUpcoming(); loadMarketers(); }
         if (!generate) { finish('Changes to ' + inv + ' were saved.', 'ok', true); return; }
@@ -1841,7 +1877,7 @@
           .catch(function(e){ finish('Saved, but image failed: ' + e.message, 'err', false); });
       })
       .withFailureHandler(function(e){ if (TOKEN !== session || authFail(e)) return; if (/overlap/i.test(e.message)) { markMissing(['checkIn', 'checkOut']); loadUpcoming(); } finish('Could not save: ' + e.message, 'err', false); })
-      .saveBooking(TOKEN, collectData(true), true);
+      .saveBooking(TOKEN, data, true);
   }
 
   /* ---------- wire up ---------- */
@@ -1851,7 +1887,11 @@
   $('btnDownload').addEventListener('click', function(){ saveFlow(true); });
   $('btnSaveRecord').addEventListener('click', function(){ saveFlow(false); });
   $('btnCalDl').addEventListener('click', downloadCalendarImage);
-  $('btnNew').addEventListener('click', newBooking);
+  $('btnNew').addEventListener('click', function(){
+    if (!(editing && editing.closed)) { newBooking(); return; }
+    var inv = editing.invoiceNo; editing.done = true; newBooking();                // Cancel Editing on a reopened booking: back to closed, then to the list
+    openClosed('Editing was canceled. ' + inv + ' is closed (settled) again.', inv);
+  });
   $('btnUpcoming').addEventListener('click', openUpcoming);
   $('invoiceNo').addEventListener('change', verifyInvoice);
   $('marketer').addEventListener('change', normalizeMarketer);
@@ -1935,9 +1975,10 @@
   }
 
   /* ---------- closed (settled) bookings: view, fix guest details, save with an emailed code ---------- */
-  var CLOSED = [], clCur = null, clSeq = 0;
-  function openClosed() {
-    showScreen('closed'); $('clMsg').textContent = ''; $('clSearch').value = '';
+  var CLOSED = [], clSeq = 0;
+  function openClosed(note, releasing) {
+    if (releasing) { showScreen('closed'); $('clList').innerHTML = '<div class="cl-empty">Closing ' + esc(releasing) + ' again...</div>'; releaseReopen_(releasing, function(){ openClosed(note); }); return; }
+    showScreen('closed'); $('clMsg').textContent = note || ''; $('clSearch').value = '';
     $('clList').innerHTML = '<div class="cl-empty">Loading closed bookings...</div>';
     var seq = ++clSeq;
     RUN.withSuccessHandler(function(r){
@@ -1959,98 +2000,42 @@
     if (!rows.length) { $('clList').innerHTML = '<div class="cl-empty">' + (CLOSED.length ? 'No closed bookings match that search.' : 'No settled bookings in the last 3 months.') + '</div>'; return; }
     $('clList').innerHTML = '<table class="cl-table"><thead><tr><th>Invoice no.</th><th>Guest</th><th class="cl-hide">Resort</th><th class="cl-hide">Booking type</th><th>Check-in</th><th class="cl-hide">Check-out</th><th></th></tr></thead><tbody>' +
       rows.map(function(b){
-        return '<tr class="cl-row" data-inv="' + esc(b.invoiceNo) + '"><td class="cl-inv">' + esc(b.invoiceNo) + '</td><td>' + esc(b.name) + '</td><td class="cl-hide">' + esc(b.resort) + '</td>' +
+        return '<tr class="cl-row" data-inv="' + esc(b.invoiceNo) + '"><td class="cl-inv">' + esc(b.invoiceNo) + (b.reopened ? '<span class="cl-tag">Reopened</span>' : '') + '</td><td>' + esc(b.name) + '</td><td class="cl-hide">' + esc(b.resort) + '</td>' +
           '<td class="cl-hide">' + esc(b.bookType ? bookingTypeName(b) : (b.typeName || '')) + '</td><td>' + esc(clDateText_(b.checkIn)) + '</td><td class="cl-hide">' + esc(clDateText_(b.checkOut)) + '</td>' +
           '<td><button class="ghost cl-ed-btn" type="button" data-inv="' + esc(b.invoiceNo) + '">Edit</button></td></tr>';
       }).join('') + '</tbody></table>';
   }
-  function openClosedEdit(inv) {
-    $('clMsg').textContent = 'Opening ' + inv + '...';
-    RUN.withSuccessHandler(function(b){
-        $('clMsg').textContent = '';
-        if (!b) { $('clMsg').textContent = 'That booking was not found. It may have been deleted.'; return; }
-        if (!b.settledOn) { $('clMsg').textContent = 'That booking is not closed any more. Use View/Modify Upcoming Booking instead.'; return; }
-        clCur = b; fillClosedEdit(b); $('clEdBg').style.display = 'flex'; $('clName').focus();
-      })
-      .withFailureHandler(function(e){ if (authFail(e)) return; $('clMsg').textContent = 'Could not open the booking: ' + e.message; })
-      .getBooking(TOKEN, inv);
-  }
-  function fillClosedEdit(b) {
-    $('clEdTitle').textContent = b.invoiceNo + ' \u00b7 Settled';
-    $('clName').value = b.name || ''; $('clContact').value = b.contact || ''; $('clAddress').value = b.address || ''; $('clPax').value = b.pax || '';
-    var referred = b.referred === 'Yes';
-    $('clAgent').value = referred ? (b.marketer || '') : ''; $('clAgent').disabled = !referred; $('clAgent').placeholder = referred ? '' : 'Not referred by an agent';
-    var modes = $('mode').innerHTML, sel = $('clMode'); sel.innerHTML = modes;
-    if (b.mode && ![].some.call(sel.options, function(o){ return o.value === b.mode; })) sel.insertAdjacentHTML('beforeend', '<option>' + esc(b.mode) + '</option>');
-    sel.value = b.mode || '';
-    $('clNotes').value = b.notes || '';
-    var cf = customFieldConfig(resortCfg(b.resort));
-    $('clCustom').innerHTML = CUSTOM_FIELD_KEYS.filter(function(k){ return (cf[k] && cf[k].visible) || b[k]; }).map(function(k){
-      return '<div><label for="cl_' + k + '">' + esc(cf[k].label) + '</label><input id="cl_' + k + '" data-ck="' + k + '" maxlength="500" value="' + esc(b[k] || '') + '"></div>';
-    }).join('');
-    var fee = +b.bookingFee || 0, dp = +b.downPayment || 0, addOns = +b.feesTotal || 0, xtra = +b.extraCharges || 0, later = +b.balancePaidLater || 0;
-    var formBal = +b.balance || 0, owed = Math.max(0, Math.round((formBal + xtra - later) * 100) / 100);
-    var ci = String(b.checkIn || '').replace('T', ' '), co = String(b.checkOut || '').replace('T', ' ');
-    var hrs = ci && co ? (pdate(co) - pdate(ci)) / 3600000 : 0;
-    var L = [['Resort', b.resort], ['Booking type', bookingTypeName(b) || 'Custom Date and Time'], ['Check-in', clDateText_(ci)], ['Check-out', clDateText_(co)],
-             ['Duration', hrs > 0 ? hoursText_(hrs) : ''], ['Booking fee', peso(fee)], ['Down payment', peso(dp)], ['Add-ons total', peso(addOns)]];
-    if (xtra) L.push(['Extra charges', peso(xtra)]);
-    L.push(['Grand total', peso(fee + addOns + xtra)], ['Remaining balance', peso(owed)], ['Settled on', clDateText_(b.settledOn)]);
-    if (+b.agentPay) L.push(['Agent commission', peso(+b.agentPay)]);
-    $('clLocked').innerHTML = L.map(function(x){ return '<div><label>' + esc(x[0]) + '</label><div class="lv" aria-readonly="true">' + esc(x[1] || '-') + '</div></div>'; }).join('');
-    $('clEdMsg').textContent = '';
-  }
-  function closedDraft_() {
-    var d = { invoiceNo: clCur.invoiceNo, name: $('clName').value.trim(), contact: $('clContact').value.trim(), address: $('clAddress').value.trim(),
-              pax: $('clPax').value.trim(), marketer: $('clAgent').disabled ? '' : $('clAgent').value.trim(), mode: $('clMode').value, notes: $('clNotes').value };
-    CUSTOM_FIELD_KEYS.forEach(function(k){ var el = $('cl_' + k); d[k] = el ? el.value : (clCur[k] || ''); });
-    return d;
-  }
-  function closedChanged_(d) {
-    var b = clCur, same = function(a, z){ return String(a || '').trim() === String(z || '').trim(); };
-    return !(same(d.name, b.name) && same(d.contact, b.contact) && same(d.address, b.address) && same(d.pax, b.pax) && same(d.mode, b.mode) && same(d.notes, b.notes) &&
-             ($('clAgent').disabled || same(d.marketer, b.marketer)) && CUSTOM_FIELD_KEYS.every(function(k){ return same(d[k], b[k]); }));
-  }
-  function closedSave() {
-    if (!clCur) return;
-    var d = closedDraft_(), m = $('clEdMsg'); m.textContent = '';
-    if (!d.name) { m.textContent = 'Enter the guest name.'; $('clName').focus(); return; }
-    if (d.pax && !/^\d{1,5}$/.test(d.pax)) { m.textContent = '# of pax must be a whole number.'; $('clPax').focus(); return; }
-    if (!$('clAgent').disabled && !d.marketer) { m.textContent = 'Enter the agent name (this booking was referred by an agent).'; $('clAgent').focus(); return; }
-    if (!closedChanged_(d)) { m.textContent = 'Nothing changed yet.'; return; }
-    sendClosedCode(false);
-  }
   function sendClosedCode(again) {
-    var btn = again ? $('btnClOtpResend') : $('btnClEdSave'), msg = again ? $('clOtpMsg') : $('clEdMsg');
-    setBusy(btn, true, 'Sending code...'); msg.textContent = '';
+    if (!editing || !editing.closed) return;
+    var btn = again ? $('btnClOtpResend') : $('btnSaveChanges'), msg = $('clOtpMsg'), inv = editing.invoiceNo;
+    setBusy(btn, true, 'Sending code...'); msg.textContent = ''; msg.style.color = '';
+    if (!again) setStatus('Sending a code to the business email...');
     RUN.withSuccessHandler(function(r){
         setBusy(btn, false);
-        if (!r || !r.ok) { msg.textContent = (r && r.message) || 'The code could not be sent.'; return; }
-        $('clOtpTo').textContent = 'We sent a 6-digit code to ' + r.email + '. Enter it to save the changes. It works for 10 minutes.';
+        if (!r || !r.ok) {
+          var m = (r && r.message) || 'The code could not be sent.';
+          if (again) msg.textContent = m;
+          else if ($('clOtpTo').getAttribute('data-inv') === inv && /just sent/i.test(m)) { setStatus(''); $('clOtpBg').style.display = 'flex'; $('clOtpCode').focus(); }   // a code from a moment ago still works
+          else setStatus(m, 'err');
+          return;
+        }
+        setStatus('');
+        $('clOtpTo').setAttribute('data-inv', inv);
+        $('clOtpTo').textContent = 'We sent a 6-digit code to ' + r.email + '. Enter it to save the changes to ' + inv + '. It works for 10 minutes.';
         $('clOtpCode').value = ''; $('clOtpBg').style.display = 'flex'; $('clOtpCode').focus();
-        if (again) { $('clOtpMsg').style.color = ''; $('clOtpMsg').textContent = 'A new code was sent.'; }
+        if (again) { msg.textContent = 'A new code was sent.'; msg.style.color = 'var(--muted)'; }
       })
-      .withFailureHandler(function(e){ setBusy(btn, false); if (authFail(e)) return; msg.textContent = 'The code could not be sent: ' + e.message; })
-      .requestClosedEditCode(TOKEN, clCur.invoiceNo);
+      .withFailureHandler(function(e){ setBusy(btn, false); if (authFail(e)) return; (again ? function(t){ msg.textContent = t; } : function(t){ setStatus(t, 'err'); })('The code could not be sent: ' + e.message); })
+      .requestClosedEditCode(TOKEN, inv);
   }
   function closedVerify() {
-    var code = $('clOtpCode').value.replace(/\D/g, ''), m = $('clOtpMsg'), btn = $('btnClOtpGo');
-    m.textContent = '';
+    if (!editing || !editing.closed || saving) return;
+    var code = $('clOtpCode').value.replace(/\D/g, ''), m = $('clOtpMsg');
+    m.textContent = ''; m.style.color = '';
     if (code.length !== 6) { m.textContent = 'Enter the 6-digit code from the email.'; $('clOtpCode').focus(); return; }
-    setBusy(btn, true, 'Saving...');
-    RUN.withSuccessHandler(function(r){
-        setBusy(btn, false);
-        if (!r || !r.ok) { m.textContent = (r && r.message) || 'The changes could not be saved.'; if (r && r.expired) $('clOtpCode').value = ''; return; }
-        var b = r.booking || {};
-        CLOSED.forEach(function(x){ if (x.invoiceNo === clCur.invoiceNo) x.name = b.name || x.name; });
-        $('clOtpBg').style.display = 'none'; $('clEdBg').style.display = 'none';
-        $('clMsg').textContent = 'Saved. ' + clCur.invoiceNo + ' was updated in the sheet.'; clCur = null;
-        renderClosed();
-      })
-      .withFailureHandler(function(e){ setBusy(btn, false); if (authFail(e)) return; m.textContent = 'The changes could not be saved: ' + e.message; })
-      .saveClosedBooking(TOKEN, closedDraft_(), code);
+    editing.code = code; commitEdit(editing.generate);
   }
-  function closeClosedEdit() { $('clEdBg').style.display = 'none'; $('clOtpBg').style.display = 'none'; clCur = null; }
+  function closedOtpBack() { $('clOtpBg').style.display = 'none'; }
 
   /* ---------- quick date check: resort + date only ---------- */
   var qdSeq = 0;
@@ -3428,6 +3413,7 @@
     loadPinCalendar();
   }
   function lockApp(msg, deferPin) {
+    if (editing && editing.closed && !editing.done && TOKEN) { editing.done = true; releaseReopen_(editing.invoiceNo); }
     clearSession_();                                  // signing out / session ended: forget it on this device too
     TOKEN = ''; ADMIN_TOKEN = '';
     pinAttemptSeq++; pinChecking = false; saving = false; editing = null; savedInvoice = '';
@@ -3439,7 +3425,7 @@
     FIELDS.forEach(function(f){ $(f).value = ''; });
     $('modalBg').style.display = $('confirmBg').style.display = $('editBg').style.display = $('calBg').style.display = $('leaveBg').style.display = $('qdBg').style.display = $('dayBg').style.display = 'none';
     $('exBg').style.display = $('exPhBg').style.display = $('exDelBg').style.display = $('delBkBg').style.display = 'none';
-    $('clEdBg').style.display = $('clOtpBg').style.display = 'none'; CLOSED = []; clCur = null; $('clList').innerHTML = ''; $('clOtpCode').value = '';
+    $('clOtpBg').style.display = 'none'; CLOSED = []; $('clList').innerHTML = ''; $('clOtpCode').value = ''; $('clOtpTo').removeAttribute('data-inv');
     $('repContent').innerHTML = ''; $('menuMsg').textContent = '';
     EXPENSES = []; exEdit = null; pendingPermDelete = null; permCode = '';          // nothing from the expenses or delete screens stays in memory
     $('exList').innerHTML = ''; $('exSum').innerHTML = ''; $('ex_photos').innerHTML = ''; $('exPhBody').innerHTML = ''; $('delBkCode').textContent = '------'; $('delBkInput').value = '';
@@ -3590,11 +3576,9 @@
   $('mnClosed').addEventListener('click', function(){ if (needCfg()) return; menuNote(''); openClosed(); });
   $('btnClBack').addEventListener('click', function(){ showScreen('menu'); });
   $('clSearch').addEventListener('input', renderClosed);
-  $('clList').addEventListener('click', function(e){ var t = e.target.closest && e.target.closest('[data-inv]'); if (t) openClosedEdit(t.getAttribute('data-inv')); });
-  $('btnClEdX').addEventListener('click', closeClosedEdit); $('btnClEdCancel').addEventListener('click', closeClosedEdit);
-  $('btnClEdSave').addEventListener('click', closedSave);
-  $('btnClOtpX').addEventListener('click', function(){ $('clOtpBg').style.display = 'none'; });
-  $('btnClOtpResend').addEventListener('click', function(){ if (clCur) sendClosedCode(true); });
+  $('clList').addEventListener('click', function(e){ var t = e.target.closest && e.target.closest('[data-inv]'); if (t) startClosedEdit(t.getAttribute('data-inv')); });
+  $('btnClOtpX').addEventListener('click', closedOtpBack); $('btnClOtpBack').addEventListener('click', closedOtpBack);
+  $('btnClOtpResend').addEventListener('click', function(){ sendClosedCode(true); });
   $('btnClOtpGo').addEventListener('click', closedVerify);
   $('clOtpCode').addEventListener('input', function(){ this.value = this.value.replace(/\D/g, '').slice(0, 6); $('clOtpMsg').textContent = ''; });
   $('clOtpCode').addEventListener('keydown', function(e){ if (e.key === 'Enter') closedVerify(); });

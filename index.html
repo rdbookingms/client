@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=4f88f3bec6">
+<link rel="stylesheet" href="app.css?v=2a8abf27e8">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -287,7 +287,7 @@
       <button class="menu-card" id="mnNew" type="button"><span class="ic">&#10133;</span><span class="t">Start New Booking</span><span class="d">Fill in the booking form and create the confirmation receipt.</span></button>
       <button class="menu-card c2" id="mnCal" type="button"><span class="ic">&#128197;</span><span class="t">Check Calendar</span><span class="d">See which dates and time slots are already booked.</span></button>
       <button class="menu-card c3" id="mnUp" type="button"><span class="ic">&#128203;</span><span class="t">View/Modify Upcoming Booking</span><span class="d">Search bookings and read their notes, modify details, regenerate receipts, cancel or permanently delete.</span></button>
-      <button class="menu-card c8" id="mnClosed" type="button"><span class="ic">&#128274;</span><span class="t">View/Modify Closed Booking</span><span class="d">Settled bookings from the last 3 months. Fix guest details; saving needs a code sent to the business email.</span></button>
+      <button class="menu-card c8" id="mnClosed" type="button"><span class="ic">&#128274;</span><span class="t">View/Modify Closed Booking</span><span class="d">Settled bookings from the last 3 months. Reopen one in the Modify form; saving needs a code sent to the business email.</span></button>
       <button class="menu-card c5" id="mnQuick" type="button"><span class="ic">&#128269;</span><span class="t">Quick Date Check</span><span class="d">Pick a resort and a date to see which booking types are open and which bookings conflict.</span></button>
       <button class="menu-card c7" id="mnExp" type="button"><span class="ic">&#128176;</span><span class="t">Resort Expenses</span><span class="d">Record what each resort spends (electricity, chlorine, repairs and more) with receipt photos, then edit or delete records.</span></button>
       <button class="menu-card c4" id="mnRep" type="button"><span class="ic">&#128202;</span><span class="t">Financial Report</span><span class="d">Income, expenses, net income, agent ranking and return of investment, by month or year. Choose what to show.</span></button>
@@ -640,37 +640,15 @@
     <div class="dd-list" id="dayList"></div>
   </div>
 </div>
-<div class="modal-bg" id="clEdBg" style="z-index:80">
-  <div class="modal cl-ed" role="dialog" aria-labelledby="clEdTitle">
-    <header><h3 id="clEdTitle">Closed booking</h3><button class="x" id="btnClEdX" type="button" aria-label="Close">&times;</button></header>
-    <div class="cl-ed-body">
-      <div class="cl-sec">Guest details</div>
-      <div class="cl-grid">
-        <div><label for="clName">Guest name *</label><input id="clName" maxlength="200"></div>
-        <div><label for="clContact">Contact #</label><input id="clContact" maxlength="60"></div>
-        <div><label for="clAddress">Address</label><input id="clAddress" maxlength="300"></div>
-        <div><label for="clPax"># of pax</label><input id="clPax" inputmode="numeric" maxlength="5"></div>
-        <div><label for="clAgent">Agent</label><input id="clAgent" maxlength="100"></div>
-        <div><label for="clMode">Mode of payment</label><select id="clMode"></select></div>
-      </div>
-      <div class="cl-grid" id="clCustom"></div>
-      <div><label for="clNotes">Notes</label><textarea id="clNotes" rows="3" maxlength="2000"></textarea></div>
-      <div class="cl-sec">Stay and totals <span>&#128274; locked</span></div>
-      <div class="cl-grid cl-locked" id="clLocked"></div>
-      <p class="cl-note">This booking is settled, so its stay, amounts and add-ons can't change. Saving sends a code to the business email first.</p>
-      <div class="adm-msg" id="clEdMsg"></div>
-      <div class="cl-btns"><button class="ghost" id="btnClEdCancel" type="button">Cancel</button><button class="primary" id="btnClEdSave" type="button">Save changes</button></div>
-    </div>
-  </div>
-</div>
 <div class="modal-bg" id="clOtpBg" style="z-index:90">
   <div class="modal cl-otp" role="dialog" aria-labelledby="clOtpTitle">
     <header><h3 id="clOtpTitle">Check the business email</h3><button class="x" id="btnClOtpX" type="button" aria-label="Close">&times;</button></header>
     <div class="cl-ed-body">
       <p class="cl-note" id="clOtpTo" style="margin-top:0"></p>
+      <p class="cl-note" style="margin-top:0">The booking goes back to closed (settled) once the changes are saved.</p>
       <input id="clOtpCode" class="cl-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code" aria-label="6-digit code">
       <div class="adm-msg" id="clOtpMsg"></div>
-      <div class="cl-btns"><button class="ghost" id="btnClOtpResend" type="button">Send a new code</button><button class="primary" id="btnClOtpGo" type="button">Verify and save</button></div>
+      <div class="cl-btns"><button class="ghost" id="btnClOtpBack" type="button">Back to editing</button><button class="ghost" id="btnClOtpResend" type="button">Send a new code</button><button class="primary" id="btnClOtpGo" type="button">Verify and save</button></div>
     </div>
   </div>
 </div>
@@ -1117,7 +1095,7 @@
   </div>
 </div>
 
-<script src="app.js?v=8ea034436e"></script>
+<script src="app.js?v=c0ae1f51d7"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

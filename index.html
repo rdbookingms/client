@@ -55,7 +55,7 @@
     addEventListener('load', function () { setTimeout(function () { load().catch(function () {}); }, 2500); });
   })();
 </script>
-<link rel="stylesheet" href="app.css?v=3b8ccc1aa9">
+<link rel="stylesheet" href="app.css?v=e4ce446720">
 <script>
   /* ---------- PHONE FIT ----------
    * Some phones open pages in "Desktop site" mode (Chrome: menu > Desktop site; Safari: Request Desktop Website).
@@ -695,7 +695,7 @@
     <div class="wiz-pg" id="wizP2">
       <h4>Receipt template and colors</h4>
       <div class="wiz-2"><div>
-        <label for="wz_style">Receipt layout</label><select id="wz_style"><option value="Modern">Modern</option><option value="Classic">Classic</option></select>
+        <label for="wz_style">Receipt layout</label><select id="wz_style"><option value="Modern">Modern</option><option value="Modern 1">Modern 1</option><option value="Classic">Classic</option></select>
         <label for="wz_c1">Primary color</label><input type="color" id="wz_c1" value="#0b93a6"><span class="wiz-hex" id="wz_c1t">#0b93a6</span>
         <label for="wz_c2">Secondary color</label><input type="color" id="wz_c2" value="#7ad45c"><span class="wiz-hex" id="wz_c2t">#7ad45c</span>
         <div class="wiz-def">If skipped: Modern, #0b93a6, #7ad45c</div>
@@ -829,7 +829,7 @@
 
       <h2>Receipt look</h2>
       <div class="row">
-        <div><label>Receipt style</label><select id="re_style"><option value="Modern">Modern (big header, optional photo background)</option><option value="Classic">Classic (simple reservation receipt)</option></select></div>
+        <div><label>Receipt style</label><select id="re_style"><option value="Modern">Modern (big header, optional photo background)</option><option value="Modern 1">Modern 1 (centered logo, cards, wave footer)</option><option value="Classic">Classic (simple reservation receipt)</option></select></div>
         <div><label>Receipt title</label><input id="re_title" maxlength="60" placeholder="RESERVATION CONFIRMATION"></div>
       </div>
       <div class="row">
@@ -1103,7 +1103,7 @@
   </div>
 </div>
 
-<script src="app.js?v=92bc1306d0"></script>
+<script src="app.js?v=5c661eb6bb"></script>
 <script>
   // Install-as-app and fast repeat visits (sw.js). Skipped on plain http except localhost testing.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

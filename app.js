@@ -141,6 +141,55 @@
     '</div>';
   }
 
+
+  // ----- Modern 1 layout (centered logo, cards, wave footer). Main color: title, package card, headers, badges and
+  // footer. Secondary color: icons, borders, dividers, the payment badge and the cream background tints. -----
+  var M1_ICONS = {user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+    cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M7 14h2M11 14h2M15 14h2M7 17h2M11 17h2"/>',
+    cin:'<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M3 12h11M10 8l4 4-4 4"/>', cout:'<path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M10 12h11M17 8l4 4-4 4"/>',
+    shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>', clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    info:'<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>', phone:'<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/>'};
+  function m1Icon(name, color, size) { size = size || 38; return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + M1_ICONS[name] + '</svg>'; }
+  function m1Ink(hex) { return lumOf(hex) > 0.4 ? toHex(rgbOf(hex).map(function(v){ return Math.round(v * .25); })) : '#ffffff'; }
+  var M1_CARD_KEYS = ['bookingFee','downPayment','balance','checkIn','checkOut','mode','bookType','name','stayDate','checkInOut','contact','address'];
+  function modern1HTML(cfg) {
+    var c1 = cfg.c1 || '#0b93a6', c2 = cfg.c2 || '#7ad45c', txt = darkHex(c1, .15), pale = mixHex(c2, .82), terms = linesOf(cfg.terms), notes = linesOf(cfg.notes), L = cfg.labels || {};
+    var item = function(key, icon, label, valueCls){ return '<div class="m1-it" data-hrow="' + key + '">' + m1Icon(icon, c2) + '<div><div class="m1-k" style="color:' + txt + '">' + esc(label) + ':</div><div class="m1-v' + (valueCls || '') + '" style="color:' + txt + '" id="p_' + key + '"></div></div></div>'; };
+    var sep = '<div class="m1-sep" style="background:' + c2 + '"></div>';
+    var contact = [cfg.contactPerson, cfg.phone, cfg.web].filter(Boolean).map(esc).join(' &middot; ');
+    return '' +
+    '<div class="m1-top"><div class="m1-logo" style="border:4px solid ' + c2 + '">' + logoHTML(cfg) + '</div>' +
+      ((cfg.headerName || cfg.name) ? '<div class="m1-name" style="color:' + darkHex(c2, .35) + '">' + esc(cfg.headerName || cfg.name) + '</div>' : '') +
+      '<div class="m1-title" style="color:' + txt + '">' + esc(cfg.title || 'RESERVATION CONFIRMATION') + '</div>' +
+      '<svg class="m1-orn" width="360" height="14" viewBox="0 0 360 14"><path d="M0 7H150M210 7H360" stroke="' + txt + '" stroke-width="2"/><path d="M162 7c6-7 12-7 18 0c6 7 12 7 18 0M180 7c-6-7-12-7-18 0" stroke="' + c2 + '" stroke-width="2" fill="none"/></svg>' +
+      '<div class="m1-inv" id="p_invoiceNo" style="background:' + c1 + '"></div></div>' +
+    '<div class="m1-body">' +
+      '<div class="m1-pair" style="background:' + pale + '">' + item('name', 'user', 'Guest', ' guest') + sep + item('dpDate', 'cal', 'Booking Date') + '</div>' +
+      '<div class="m1-pair out" style="border-color:' + c2 + '">' + item('checkIn', 'cin', L.checkIn || 'Check-In') + sep + item('checkOut', 'cout', L.checkOut || 'Check-Out') + '</div>' +
+      '<div class="m1-two">' +
+        '<div class="m1-pkg" style="background:' + c1 + '">' +
+          '<div data-hrow="bookType"><div class="lab">Package:</div><div class="name" style="border-color:' + c2 + '" id="p_bookType"></div></div>' +
+          '<div class="m1-rate"><span class="lab">' + esc(L.bookingFee || 'Booking Fee') + ':</span><span class="n" id="p_bookingFee"></span></div>' +
+          '<div class="m1-pp" style="color:' + txt + '"><span style="background:' + pale + '">' + esc(L.downPayment || 'Down Payment') + ':</span><span id="p_downPayment"></span></div>' +
+          '<div class="m1-pp" style="color:' + txt + '"><span style="background:' + pale + '">Balance:</span><span id="p_balance"></span></div>' +
+          '<div class="m1-badge" data-hrow="mode" style="background:linear-gradient(90deg,' + c2 + ',' + mixHex(c2, .45) + ');color:' + m1Ink(c2) + '">' + m1Icon('phone', 'currentColor', 20) + '<span>Payment via <span id="p_mode"></span></span></div>' +
+        '</div>' +
+        '<div class="m1-card" style="border-color:' + c2 + '"><h4 style="background:' + c1 + '">Booking Details</h4>' +
+          '<table class="bd m1-fixed"><tr><td class="k" style="color:' + txt + '">Contact #</td><td class="v" id="p_contact"></td></tr><tr><td class="k" style="color:' + txt + '">Address</td><td class="v" id="p_address"></td></tr></table>' +
+          '<table class="bd booking-details m1-details" data-m1-ink="' + txt + '"></table></div>' +
+      '</div>' +
+      '<div class="m1-boxes"><div class="yb excl-box"><h4>' + esc(cfg.exclHeading || 'OPTIONAL ADD-ONS') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' + amenBox(cfg) + '</div>' +
+      (notes.length ? '<div class="m1-notice" style="background:' + pale + ';color:' + txt + '">' + m1Icon('info', c2, 26) + '<ul' + listAttr(cfg, 'notes') + '>' + lis(notes) + '</ul></div>' : '') +
+      (cfg.deposit || terms.length ? '<div class="m1-terms">' +
+        (cfg.deposit ? '<div class="ic">' + m1Icon('shield', c2) + '</div><div class="tx" style="border-color:' + c2 + '"><b style="color:' + txt + '">Security Deposit:</b> ' + esc(cfg.deposit) + '</div>' : '') +
+        (terms.length ? '<div class="ic">' + m1Icon('clock', c2) + '</div><div class="tx" style="border-color:' + c2 + '"><b style="color:' + txt + '">' + esc(cfg.termsHeading || 'Terms and Conditions') + '</b><ul' + listAttr(cfg, 'terms') + '>' + lis(terms) + '</ul></div>' : '') +
+      '</div>' : '') +
+    '</div>' +
+    '<div class="m1-foot" style="background:' + c1 + '"><svg class="wave" viewBox="0 0 800 40" preserveAspectRatio="none"><path d="M0 26C200 4 600 4 800 26V40H0z" fill="' + c2 + '"/><path d="M0 31C200 11 600 11 800 31V40H0z" fill="' + c1 + '"/></svg>' +
+      (cfg.thanks ? '<div class="m1-ty" style="color:' + mixHex(c2, .3) + '">' + esc(cfg.thanks) + '</div>' : '') +
+      (contact || cfg.address ? '<div class="m1-con">' + contact + (contact && cfg.address ? '<br>' : '') + esc(cfg.address || '') + '</div>' : '') +
+    '</div>';
+  }
   // free (0-priced) add-ons get their own green box; hidden until renderReceiptFees finds some
   function amenBox(cfg) {
     return '<div class="amen-box" id="p_amenBox" style="display:none"><h4>' + esc(cfg.amenTitle || 'INCLUDED AMENITIES') + '</h4><ul class="fee-list" id="p_amenList"></ul></div>';
@@ -173,8 +222,10 @@
     if (!cfg) { root.innerHTML = ''; return; }
     root.setAttribute('data-resort', cfg.name);
     root.classList.toggle('pansol', cfg.style === 'Classic');
-    root.style.background = cfg.style === 'Classic' ? 'linear-gradient(180deg,' + mixHex(cfg.c1, .92) + ' 0%,#ffffff 45%)' : '#fff';
-    root.innerHTML = cfg.style === 'Classic' ? classicHTML(cfg) : modernHTML(cfg);
+    root.classList.toggle('m1', cfg.style === 'Modern 1');
+    root.style.background = cfg.style === 'Classic' ? 'linear-gradient(180deg,' + mixHex(cfg.c1, .92) + ' 0%,#ffffff 45%)' :
+      cfg.style === 'Modern 1' ? 'linear-gradient(180deg,' + mixHex(cfg.c2 || '#7ad45c', .9) + ' 0%,#fffdf8 55%,' + mixHex(cfg.c2 || '#7ad45c', .9) + ' 100%)' : '#fff';
+    root.innerHTML = cfg.style === 'Classic' ? classicHTML(cfg) : cfg.style === 'Modern 1' ? modern1HTML(cfg) : modernHTML(cfg);
     root.__cfg = cfg;                                  // add-on display mode, used by renderReceiptFees
     renderBookingDetails(root, cfg);
     applyReceiptVisibility(root, cfg);
@@ -233,12 +284,14 @@
     var options = customFieldConfig(cfg), table = root.querySelector('table.booking-details');
     root._customFieldConfig = options;
     if (!table) return;
-    var style = tableStyleKey(cfg.style), defs = detailFieldDefs(cfg), tint = style === 'classic' ? '' : mixHex(cfg.c1, .86), cells = {}, order = [];
+    var m1 = cfg.style === 'Modern 1', ink = m1 ? table.getAttribute('data-m1-ink') : '';
+    var style = tableStyleKey(cfg.style), defs = detailFieldDefs(cfg), tint = style === 'classic' || m1 ? '' : mixHex(cfg.c1, .86), cells = {}, order = [];
     options.tableLayout[style].forEach(function(item){
       var key = item.key, custom = CUSTOM_FIELD_KEYS.indexOf(key) >= 0, def = custom ? [options[key].label, 'v'] : defs[key];
       if (!def) return;
+      if (m1 && M1_CARD_KEYS.indexOf(key) >= 0) return;         // Modern 1 shows these in its cards
       var k = document.createElement('td'), v = document.createElement('td');
-      k.className = 'k' + (custom ? ' custom-cell' : ''); k.textContent = def[0]; if (tint) k.style.background = tint;
+      k.className = 'k' + (custom ? ' custom-cell' : ''); k.textContent = def[0]; if (tint) k.style.background = tint; if (ink) k.style.color = ink;
       v.className = def[1] + (custom ? ' custom-cell' : '');
       if (def[2]) v.innerHTML = def[2]; else v.id = 'p_' + key;
       k.setAttribute('data-detail-key', key); v.setAttribute('data-detail-key', key);
@@ -255,12 +308,13 @@
   function layoutBookingDetails(root) {
     var cells = root._detailCells, options = root._customFieldConfig, table = root.querySelector('table.booking-details');
     if (!cells || !options || !table) return;
-    var rows = [], hidden = [], pending = null;
+    var rows = [], hidden = [], pending = null, single = table.classList.contains('m1-details');
     root._detailOrder.forEach(function(key){
       var c = cells[key];
       var show = c.custom ? options[key].visible && !(options.autoHideEmpty && !c.v.textContent.trim()) : root._detailHide.indexOf(key) < 0;
       if (key === 'marketer' && root._agentOff) show = false;      // "Referred by Agent: No" (or no agent saved): no Agent row
       if (!show) { hidden.push(key); return; }
+      if (single) { rows.push({one:key}); return; }
       if (!pending) { pending = key; return; }
       rows.push({col1:pending, col2:key}); pending = null;
     });
@@ -277,7 +331,8 @@
     function blank(tr) { var td = document.createElement('td'); td.className = 'custom-receipt-placeholder'; td.colSpan = 2; td.setAttribute('aria-hidden', 'true'); tr.appendChild(td); }
     rows.forEach(function(row){
       var tr = document.createElement('tr');
-      if (row.full) { tr.setAttribute('data-detail-row', 'full'); place(tr, row.full, 3); }
+      if (row.one) { tr.setAttribute('data-detail-row', 'one'); place(tr, row.one, 0); }
+      else if (row.full) { tr.setAttribute('data-detail-row', 'full'); place(tr, row.full, 3); }
       else {
         tr.setAttribute('data-detail-row', 'pair');
         if (row.col1) place(tr, row.col1, 0); else blank(tr);
@@ -301,7 +356,7 @@
   function applyReceiptVisibility(root, cfg) {
     (cfg.hide || []).forEach(function(key){
       var value = root.querySelector('#p_' + key); if (!value) return;
-      var row = value.closest('.kv');
+      var row = value.closest('.kv') || value.closest('[data-hrow]');
       if (row) {row.hidden = true; row.style.display='none';}
       else if (value.tagName === 'TD') { var label = value.previousElementSibling; value.hidden = true; value.style.display='none'; if (label) {label.hidden = true; label.style.display='none';} }
       else {value.hidden = true; value.style.display='none';}
@@ -442,7 +497,7 @@
         WZ.startName = res.resort || 'My Resort';
         $('wz_name').value = WZ.startName === 'My Resort' ? '' : WZ.startName;      // the business name the sheet was created with
         $('wzNameDef').textContent = 'If skipped: "' + WZ.startName + '"';
-        $('wz_style').value = rs.style === 'Classic' ? 'Classic' : 'Modern';
+        $('wz_style').value = rs.style === 'Classic' || rs.style === 'Modern 1' ? rs.style : 'Modern';
         $('wz_c1').value = rs.c1 || D.c1 || '#0b93a6'; $('wz_c2').value = rs.c2 || D.c2 || '#7ad45c';
         $('wz_terms').value = rs.terms || D.terms || ''; $('wz_notes').value = rs.notes || D.notes || '';
         $('wz_cp').value = rs.contactPerson || ''; $('wz_ph').value = rs.phone || ''; $('wz_ad').value = rs.address || ''; $('wz_web').value = rs.web || '';

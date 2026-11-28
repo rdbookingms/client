@@ -169,16 +169,16 @@
       '<div class="m1-two">' +
         '<div class="m1-pkg" style="background:' + c1 + '">' +
           '<div data-hrow="bookType"><div class="lab">Package:</div><div class="name" style="border-color:' + c2 + '" id="p_bookType"></div></div>' +
-          '<div class="m1-rate"><span class="lab">' + esc(L.bookingFee || 'Booking Fee') + ':</span><span class="n" id="p_bookingFee"></span></div>' +
+          '<div class="m1-amt"><div class="m1-rate"><span class="lab">' + esc(L.bookingFee || 'Booking Fee') + ':</span><span class="n" id="p_bookingFee"></span></div>' +
           '<div class="m1-pp" style="color:' + txt + '"><span style="background:' + pale + '">' + esc(L.downPayment || 'Down Payment') + ':</span><span id="p_downPayment"></span></div>' +
-          '<div class="m1-pp" style="color:' + txt + '"><span style="background:' + pale + '">Balance:</span><span id="p_balance"></span></div>' +
+          '<div class="m1-pp" style="color:' + txt + '"><span style="background:' + pale + '">Balance:</span><span id="p_balance"></span></div></div>' +
           '<div class="m1-badge" data-hrow="mode" style="background:linear-gradient(90deg,' + c2 + ',' + mixHex(c2, .45) + ');color:' + m1Ink(c2) + '">' + m1Icon('phone', 'currentColor', 20) + '<span>Payment via <span id="p_mode"></span></span></div>' +
         '</div>' +
-        '<div class="m1-card" style="border-color:' + c2 + '"><h4 style="background:' + c1 + '">Booking Details</h4>' +
+        '<div class="m1-right"><div class="m1-card" style="border-color:' + c2 + '"><h4 style="background:' + c1 + '">Booking Details</h4>' +
           '<table class="bd m1-fixed"><tr><td class="k" style="color:' + txt + '">Contact #</td><td class="v" id="p_contact"></td></tr><tr><td class="k" style="color:' + txt + '">Address</td><td class="v" id="p_address"></td></tr></table>' +
           '<table class="bd booking-details m1-details" data-m1-ink="' + txt + '"></table></div>' +
+          amenBox(cfg) + '<div class="yb excl-box"><h4>' + esc(cfg.exclHeading || 'OPTIONAL ADD-ONS') + '</h4><ul class="fee-list" id="p_feeList"></ul></div></div>' +
       '</div>' +
-      '<div class="m1-boxes"><div class="yb excl-box"><h4>' + esc(cfg.exclHeading || 'OPTIONAL ADD-ONS') + '</h4><ul class="fee-list" id="p_feeList"></ul></div>' + amenBox(cfg) + '</div>' +
       (notes.length ? '<div class="m1-notice" style="background:' + pale + ';color:' + txt + '">' + m1Icon('info', c2, 26) + '<ul' + listAttr(cfg, 'notes') + '>' + lis(notes) + '</ul></div>' : '') +
       (cfg.deposit || terms.length ? '<div class="m1-terms">' +
         (cfg.deposit ? '<div class="ic">' + m1Icon('shield', c2) + '</div><div class="tx" style="border-color:' + c2 + '"><b style="color:' + txt + '">Security Deposit:</b> ' + esc(cfg.deposit) + '</div>' : '') +
